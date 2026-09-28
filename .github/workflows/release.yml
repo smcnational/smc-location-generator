@@ -1,0 +1,44 @@
+# Builds the plugin zip and publishes a GitHub release when a version tag is pushed.
+#   v1.15.0          normal release (Stable channel)
+#   v1.15.0-beta.1   pre-release (Beta channel only)
+# The tag must match the Version in smc-location-generator.php.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the plugin version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(grep -m1 -E '^\s*\*\s*Version:' smc-location-generator.php | awk '{print $NF}')
+          echo "Tag: $TAG  Plugin Version: $VERSION"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag v$TAG doesn't match Version $VERSION in smc-location-generator.php. Update the Version line, commit, and tag again."
+            exit 1
+          fi
+
+      - name: Check PHP syntax
+        run: |
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Build the plugin zip
+        run: |
+          mkdir -p build/smc-location-generator
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude 'RELEASING.md' ./ build/smc-location-generator/
+          cd build && zip -rq smc-location-generator.zip smc-location-generator
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: build/smc-location-generator.zip
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
