@@ -83,6 +83,7 @@ class SMC_Location_Transfer {
 					'type'        => (string) get_post_meta( $p->ID, 'team_type', true ),
 					'title'       => (string) get_post_meta( $p->ID, 'job_title', true ),
 					'credentials' => (string) get_post_meta( $p->ID, 'credentials', true ),
+					'anchor'      => (string) get_post_meta( $p->ID, 'anchor', true ),
 					'order'       => (int) $p->menu_order,
 					'photo'       => self::image_out( get_post_thumbnail_id( $p ) ),
 					'locations'   => is_wp_error( $slugs ) ? [] : $slugs,

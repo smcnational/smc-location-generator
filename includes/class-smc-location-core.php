@@ -33,7 +33,11 @@ class SMC_Location_Core {
 	];
 
 	public static function init() {
-		add_action( 'init', [ __CLASS__, 'register_taxonomies' ], 11 ); // After CPT UI (priority 9).
+		// Priority 0: Elementor Pro builds its Theme Builder conditions ("In Location Category",
+		// "In Page Type") during init, and only for taxonomies that already exist at that point.
+		// CPT UI used to register them at priority 9, so the plugin has to be at least as early.
+		add_action( 'init', [ __CLASS__, 'register_taxonomies' ], 0 );
+		add_action( 'wp_loaded', [ __CLASS__, 'after_update' ] );
 		add_action( 'init', [ __CLASS__, 'register_shortcodes' ], 30 ); // After WPCode snippets, so these win.
 		add_action( 'acf/init', [ __CLASS__, 'register_base_fields' ], 20 );
 
@@ -45,8 +49,18 @@ class SMC_Location_Core {
 
 	/* ========== Taxonomies ========== */
 
+	/** Taxonomies the plugin registered this request. */
+	private static $ours = [];
+
+	/** True when CPT UI is active and still defines this taxonomy (then CPT UI registers it). */
+	private static function cptui_has( $tax ) {
+		$defs = (array) get_option( 'cptui_taxonomies', [] );
+		return isset( $defs[ $tax ] ) && ( function_exists( 'cptui_create_custom_taxonomies' ) || defined( 'CPTUI_VERSION' ) );
+	}
+
 	public static function register_taxonomies() {
-		if ( ! taxonomy_exists( self::TAX ) ) {
+		if ( ! taxonomy_exists( self::TAX ) && ! self::cptui_has( self::TAX ) ) {
+			self::$ours[ self::TAX ] = true;
 			register_taxonomy(
 				self::TAX,
 				[ 'page' ],
@@ -62,18 +76,19 @@ class SMC_Location_Core {
 					],
 					'hierarchical'       => true,
 					'public'             => true,  // Elementor Theme Builder conditions need a public taxonomy.
-					'publicly_queryable' => false, // ...but no archive pages.
+					'publicly_queryable' => true,
 					'rewrite'            => false,
 					'query_var'          => false,
 					'show_ui'            => true,
 					'show_in_menu'       => true,
-					'show_in_nav_menus'  => false,
+					'show_in_nav_menus'  => true,
 					'show_admin_column'  => true,
 					'show_in_rest'       => true,
 				]
 			);
 		}
-		if ( ! taxonomy_exists( self::PAGE_TYPES ) ) {
+		if ( ! taxonomy_exists( self::PAGE_TYPES ) && ! self::cptui_has( self::PAGE_TYPES ) ) {
+			self::$ours[ self::PAGE_TYPES ] = true;
 			register_taxonomy(
 				self::PAGE_TYPES,
 				[ 'page' ],
@@ -87,11 +102,11 @@ class SMC_Location_Core {
 					],
 					'hierarchical'       => true,
 					'public'             => true,
-					'publicly_queryable' => false,
+					'publicly_queryable' => true,
 					'rewrite'            => false,
 					'query_var'          => false,
 					'show_ui'            => true,
-					'show_in_nav_menus'  => false,
+					'show_in_nav_menus'  => true,
 					'show_admin_column'  => true,
 					'show_in_rest'       => true,
 				]
@@ -101,16 +116,27 @@ class SMC_Location_Core {
 
 	/** "plugin", "CPT UI", or "other" for a taxonomy. */
 	private static function taxonomy_source( $tax ) {
-		$cptui = (array) get_option( 'cptui_taxonomies', [] );
-		if ( isset( $cptui[ $tax ] ) ) {
-			return 'CPT UI';
-		}
-		global $wp_taxonomies;
-		// Registered at our priority with our labels = ours.
-		if ( isset( $wp_taxonomies[ $tax ] ) && ! $wp_taxonomies[ $tax ]->publicly_queryable && false === $wp_taxonomies[ $tax ]->rewrite ) {
+		if ( ! empty( self::$ours[ $tax ] ) ) {
 			return 'plugin';
 		}
+		if ( self::cptui_has( $tax ) ) {
+			return 'CPT UI';
+		}
 		return taxonomy_exists( $tax ) ? 'other' : '';
+	}
+
+	/**
+	 * After the plugin updates, rebuild Elementor's conditions and CSS caches once, so
+	 * templates pick up the taxonomies right away.
+	 */
+	public static function after_update() {
+		$version = class_exists( 'SMC_Location_Updater' ) ? SMC_Location_Updater::current_version() : '';
+		if ( $version && get_option( 'smc_core_version' ) !== $version ) {
+			update_option( 'smc_core_version', $version, false );
+			if ( class_exists( 'SMC_Location_Cloner' ) ) {
+				SMC_Location_Cloner::refresh_caches();
+			}
+		}
 	}
 
 	/* ========== Shortcodes ========== */

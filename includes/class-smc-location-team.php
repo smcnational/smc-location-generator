@@ -15,6 +15,9 @@
  *   location_team      everyone          location_doctors   doctors only
  *   location_staff     team members only
  * and [team field="..."] or dynamic tags in the Loop Item.
+ *
+ * Every profile has a menu anchor (e.g. #dr-jane-lee), so a menu item or button can link
+ * straight to it: /kenton/meet-the-doctors/#dr-jane-lee
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -29,6 +32,7 @@ class SMC_Location_Team {
 		add_action( 'init', [ __CLASS__, 'register' ], 99 );
 		add_action( 'after_setup_theme', [ __CLASS__, 'thumbnails' ], 20 );
 		add_action( 'acf/init', [ __CLASS__, 'register_fields' ] );
+		add_filter( 'acf/prepare_field/key=field_smc_team_anchor', [ __CLASS__, 'anchor_placeholder' ] );
 		add_action( 'init', [ __CLASS__, 'register_shortcodes' ], 20 );
 		foreach ( [ 'location_team', 'location_doctors', 'location_staff' ] as $qid ) {
 			add_action( "elementor/query/$qid", [ __CLASS__, 'elementor_query' ] );
@@ -124,6 +128,14 @@ class SMC_Location_Team {
 						'instructions' => 'Shown after the name: "Jane Lee, DDS".',
 						'wrapper'      => [ 'width' => '30' ],
 					],
+					[
+						'key'          => 'field_smc_team_anchor',
+						'label'        => 'Menu anchor',
+						'name'         => 'anchor',
+						'type'         => 'text',
+						'prepend'      => '#',
+						'instructions' => 'Link straight to this profile by adding this to the page URL, e.g. /kenton/meet-the-doctors/#dr-jane-lee. Leave blank to use the name.',
+					],
 				],
 				'location' => [ [ [ 'param' => 'post_type', 'operator' => '==', 'value' => self::TYPE ] ] ],
 				'position' => 'acf_after_title',
@@ -173,7 +185,7 @@ class SMC_Location_Team {
 			printf( '<label style="margin-right:16px"><input type="radio" name="smc_team[team_type]" value="%s" %s> %s</label>', esc_attr( $k ), checked( $type, $k, false ), esc_html( $label ) );
 		}
 		echo '</p>';
-		foreach ( [ 'job_title' => 'Job title', 'credentials' => 'Credentials' ] as $k => $label ) {
+		foreach ( [ 'job_title' => 'Job title', 'credentials' => 'Credentials', 'anchor' => 'Menu anchor (leave blank to use the name)' ] as $k => $label ) {
 			printf( '<p><label>%s<br><input name="smc_team[%s]" class="regular-text" value="%s"></label></p>', esc_html( $label ), esc_attr( $k ), esc_attr( get_post_meta( $post->ID, $k, true ) ) );
 		}
 	}
@@ -191,6 +203,7 @@ class SMC_Location_Team {
 			update_post_meta( $post_id, 'team_type', isset( self::KINDS[ $in['team_type'] ?? '' ] ) ? $in['team_type'] : 'team' );
 			update_post_meta( $post_id, 'job_title', sanitize_text_field( $in['job_title'] ?? '' ) );
 			update_post_meta( $post_id, 'credentials', sanitize_text_field( $in['credentials'] ?? '' ) );
+			update_post_meta( $post_id, 'anchor', sanitize_title( $in['anchor'] ?? '' ) );
 		}
 	}
 
@@ -223,6 +236,7 @@ class SMC_Location_Team {
 			echo esc_html( self::KINDS[ get_post_meta( $post_id, 'team_type', true ) ] ?? 'Team member' );
 		} elseif ( 'smc_title' === $col ) {
 			echo esc_html( trim( get_post_meta( $post_id, 'job_title', true ) . ( get_post_meta( $post_id, 'credentials', true ) ? ' (' . get_post_meta( $post_id, 'credentials', true ) . ')' : '' ) ) );
+			echo '<br><code class="smc-copy" title="Menu anchor. Click to copy">#' . esc_html( self::anchor( $post_id ) ) . '</code>';
 		} elseif ( 'smc_loc' === $col ) {
 			$terms = wp_get_object_terms( $post_id, self::TAX );
 			if ( is_wp_error( $terms ) || ! $terms ) {
@@ -347,6 +361,7 @@ class SMC_Location_Team {
 				'words'    => 40,
 				'photo'    => 'medium_large',
 				'shape'    => 'square',
+				'offset'   => '',
 			],
 			$atts,
 			'location_team'
@@ -376,10 +391,11 @@ class SMC_Location_Team {
 		}
 		$cols  = max( 1, min( 4, (int) $a['columns'] ) );
 		$round = 'circle' === $a['shape'] ? ' smc-team-circle' : '';
-		$out   = self::css() . '<div class="smc-team' . $round . '" style="--smc-team-cols:' . $cols . '">';
+		$offset = preg_match( '/^\d{1,3}$/', trim( (string) $a['offset'] ) ) ? ';--smc-anchor-offset:' . trim( $a['offset'] ) . 'px' : '';
+		$out    = self::css() . '<div class="smc-team' . $round . '" style="--smc-team-cols:' . $cols . $offset . '">';
 
 		foreach ( $people as $p ) {
-			$out .= '<div class="smc-team-member">';
+			$out .= '<div class="smc-team-member" id="' . esc_attr( self::anchor( $p->ID ) ) . '">';
 			if ( has_post_thumbnail( $p ) ) {
 				$out .= '<div class="smc-team-photo">' . get_the_post_thumbnail( $p, sanitize_key( $a['photo'] ) ?: 'medium_large', [ 'alt' => $p->post_title ] ) . '</div>';
 			}
@@ -397,6 +413,23 @@ class SMC_Location_Team {
 		return $out . '</div>';
 	}
 
+	/** The profile's menu anchor: the Menu anchor field, or the name as a slug ("dr-jane-lee"). */
+	public static function anchor( $post_id ) {
+		$set = sanitize_title( (string) get_post_meta( $post_id, 'anchor', true ) );
+		return '' !== $set ? $set : sanitize_title( get_the_title( $post_id ) );
+	}
+
+	/** Shows the automatic anchor as the field's placeholder. */
+	public static function anchor_placeholder( $field ) {
+		global $post;
+		if ( $post && self::TYPE === $post->post_type && $post->post_title ) {
+			$field['placeholder'] = sanitize_title( $post->post_title );
+		} else {
+			$field['placeholder'] = 'dr-jane-lee';
+		}
+		return $field;
+	}
+
 	public static function name_with_credentials( $post_id ) {
 		$cred = trim( (string) get_post_meta( $post_id, 'credentials', true ) );
 		return get_the_title( $post_id ) . ( '' !== $cred ? ", $cred" : '' );
@@ -407,7 +440,7 @@ class SMC_Location_Team {
 	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten), photo, photo_url
 	 */
 	public static function field_shortcode( $atts ) {
-		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large' ], $atts, 'team' );
+		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large', 'offset' => '' ], $atts, 'team' );
 		$id = get_the_ID();
 		if ( ! $id || self::TYPE !== get_post_type( $id ) ) {
 			return '';
@@ -417,6 +450,12 @@ class SMC_Location_Team {
 				return esc_html( self::name_with_credentials( $id ) );
 			case 'credentials':
 				return esc_html( (string) get_post_meta( $id, 'credentials', true ) );
+			case 'anchor':
+				// An invisible anchor to put at the top of a Loop Item.
+				$style = preg_match( '/^\d{1,3}$/', trim( (string) $a['offset'] ) ) ? ' style="--smc-anchor-offset:' . trim( $a['offset'] ) . 'px"' : '';
+				return self::css() . '<span class="smc-team-anchor" id="' . esc_attr( self::anchor( $id ) ) . '"' . $style . '></span>';
+			case 'anchor_id':
+				return esc_attr( self::anchor( $id ) );
 			case 'title':
 				return esc_html( (string) get_post_meta( $id, 'job_title', true ) );
 			case 'type':
@@ -448,6 +487,8 @@ class SMC_Location_Team {
 			. '.smc-team-name{font-weight:700;margin-top:14px;font-size:1.15em}'
 			. '.smc-team-title{opacity:.8;margin-top:2px}'
 			. '.smc-team-bio{margin-top:10px}.smc-team-bio p:last-child{margin-bottom:0}'
+			. '.smc-team-member,.smc-team-anchor{scroll-margin-top:var(--smc-anchor-offset,120px)}'
+			. '.smc-team-anchor{display:block;height:0;overflow:hidden}'
 			. '</style>';
 	}
 
@@ -486,6 +527,8 @@ class SMC_Location_Team {
 					'_job_title'   => 'field_smc_team_title',
 					'credentials'  => sanitize_text_field( $m['credentials'] ?? '' ),
 					'_credentials' => 'field_smc_team_credentials',
+					'anchor'       => sanitize_title( $m['anchor'] ?? '' ),
+					'_anchor'      => 'field_smc_team_anchor',
 				],
 			],
 			true

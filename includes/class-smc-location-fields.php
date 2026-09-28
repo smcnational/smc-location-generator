@@ -417,7 +417,7 @@ class SMC_Location_Fields {
 	/** Click a shortcode to copy it (location screens only). */
 	public static function copy_script() {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || ( self::TAX !== ( $screen->taxonomy ?? '' ) && 'smc_review' !== ( $screen->post_type ?? '' ) && false === strpos( (string) $screen->id, 'smc-' ) && false === strpos( (string) $screen->id, 'locations' ) ) ) {
+		if ( ! $screen || ( self::TAX !== ( $screen->taxonomy ?? '' ) && ! in_array( $screen->post_type ?? '', [ 'smc_review', 'smc_team' ], true ) && false === strpos( (string) $screen->id, 'smc-' ) && false === strpos( (string) $screen->id, 'locations' ) ) ) {
 			return;
 		}
 		?>
