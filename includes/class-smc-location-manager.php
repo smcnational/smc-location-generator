@@ -113,6 +113,28 @@ class SMC_Location_Manager {
 			exit;
 		}
 
+		if ( 'launch' === $action ) {
+			check_admin_referer( "smc_launch_$tid" );
+			$do = sanitize_key( $_POST['launch_do'] ?? '' );
+			SMC_Location_Launch::save_manual( $term, array_map( 'sanitize_key', (array) ( $_POST['done'] ?? [] ) ) );
+			$args = [ 'action' => 'edit', 'term' => $tid ];
+			if ( 'publish' === $do ) {
+				$res = SMC_Location_Launch::publish( $term );
+				if ( is_string( $res ) ) {
+					$this->error = $res;
+					return;
+				}
+				$args += [ 'msg' => 'launched', 'pages' => $res['pages'], 'templates' => $res['templates'] ];
+				if ( $res['warnings'] ) {
+					set_transient( 'smc_launch_warn_' . get_current_user_id(), $res['warnings'], 300 );
+				}
+			} elseif ( 'undo' === $do ) {
+				$args += [ 'msg' => 'unlaunched', 'pages' => SMC_Location_Launch::undo( $term ) ];
+			}
+			wp_safe_redirect( self::url( $args ) . '#launch' );
+			exit;
+		}
+
 		if ( 'delete' === $action ) {
 			check_admin_referer( "smc_loc_delete_$tid" );
 			$typed = trim( sanitize_text_field( wp_unslash( $_POST['confirm_name'] ?? '' ) ) );
@@ -393,6 +415,16 @@ class SMC_Location_Manager {
 		$msg = sanitize_key( $_GET['msg'] ?? '' );
 		if ( 'saved' === $msg ) {
 			echo '<div class="notice notice-success is-dismissible"><p>Location saved.</p></div>';
+		} elseif ( 'launched' === $msg ) {
+			printf( '<div class="notice notice-success is-dismissible"><p><strong>Location published.</strong> %d page(s) and %d template(s) are live.</p></div>', absint( $_GET['pages'] ?? 0 ), absint( $_GET['templates'] ?? 0 ) );
+			foreach ( (array) get_transient( 'smc_launch_warn_' . get_current_user_id() ) as $w ) {
+				if ( $w ) {
+					echo '<div class="notice notice-warning"><p>' . esc_html( $w ) . '</p></div>';
+				}
+			}
+			delete_transient( 'smc_launch_warn_' . get_current_user_id() );
+		} elseif ( 'unlaunched' === $msg ) {
+			printf( '<div class="notice notice-success is-dismissible"><p>%d page(s) and template(s) put back to draft.</p></div>', absint( $_GET['pages'] ?? 0 ) );
 		} elseif ( 'deleted' === $msg ) {
 			printf(
 				'<div class="notice notice-success is-dismissible"><p>Deleted %s: %d page(s), %d template(s), %d team member(s) and %d review(s) moved to the Trash, %d menu(s) and %d category term(s) deleted.</p></div>',
@@ -438,7 +470,7 @@ class SMC_Location_Manager {
 		?>
 		<table class="widefat striped smc-list">
 			<thead><tr>
-				<th>Location</th><th>Address</th><th>Phone &amp; email</th><th>Hours</th><th>Map</th><th>Social</th><th>Team</th><th>Reviews</th><th>Pages</th><th>Added</th>
+				<th>Location</th><th>Address</th><th>Phone &amp; email</th><th>Hours</th><th>Map</th><th>Social</th><th>Team</th><th>Reviews</th><th>Pages</th><th>Launch</th><th>Added</th>
 			</tr></thead>
 			<tbody>
 			<?php
@@ -488,6 +520,7 @@ class SMC_Location_Manager {
 					<?php $reviews = SMC_Location_Reviews::count( $tid ); ?>
 					<td><?php echo $reviews ? '<a href="' . esc_url( admin_url( 'edit.php?post_type=' . SMC_Location_Reviews::TYPE . '&smc_location=' . $tid ) ) . '">' . (int) $reviews . '</a>' : '<a class="smc-missing" href="' . esc_url( admin_url( 'post-new.php?post_type=' . SMC_Location_Reviews::TYPE . '&location=' . $tid ) ) . '">Add</a>'; ?></td>
 					<td><?php echo $page ? '<code>/' . esc_html( get_page_uri( $page ) ) . '/</code> ' . (int) $count : '<span class="smc-missing">No page</span>'; ?></td>
+					<td><?php echo SMC_Location_Launch::list_cell( $t ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
 					<td><?php echo $added ? esc_html( $added ) : '&mdash;'; ?></td>
 				</tr>
 			<?php endforeach; ?>
@@ -522,6 +555,8 @@ class SMC_Location_Manager {
 			Each field below shows the shortcode that displays it. Click a shortcode to copy it. Shortcodes show the details of the <em>page's</em> location, so the same shortcode works on every location's pages.
 			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="doctors"]</code> its doctors &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="team"]</code> its team &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
 		</p></div>
+
+		<?php SMC_Location_Launch::render( $term ); ?>
 
 		<form method="post">
 			<?php wp_nonce_field( "smc_loc_save_$tid" ); ?>
@@ -680,6 +715,7 @@ class SMC_Location_Manager {
 	}
 
 	private function styles() {
+		SMC_Location_Launch::styles();
 		?>
 		<style>
 			.smc-loc .smc-list td { vertical-align: top; }

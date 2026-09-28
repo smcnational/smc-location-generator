@@ -122,6 +122,22 @@ Hover over a location for these links:
 
   Delete refuses to remove pages if the site's homepage is one of them. It also reminds you to set up redirects and update the store locator.
 
+## Launch a location
+
+The top of each location's **Edit** screen has a **Launch checklist**. Green is done, red has to be fixed before publishing, amber is worth a look but doesn't block, and blue is information.
+
+- **Details:** address, city and state, phone, booking link, hours and map (red if missing). A cloned location's phone and booking link are also red if they're still the copied location's. Email and the Google Business Profile link are amber.
+- **Team and reviews:** at least one published doctor (red). Team members and reviews are amber.
+- **Pages:** the main page, which pages are still drafts or pending (these are what gets published), and for cloned locations any page or template that still mentions the old city (amber, since some mentions are on purpose).
+- **Header, footer and menu:** a header and a footer template that show on the location's pages. Using the site-wide header or footer instead is amber. A menu named after the location is amber if missing.
+- **Before launch:** the store locator is checked automatically on sites using WP Store Locator or Agile Store Locator; otherwise it's a checkbox. The location count text and a desktop and mobile review are checkboxes. Ticking one saves it right away.
+
+When nothing is red, **Publish location** publishes every draft or pending page in the location's page tree, plus its draft Theme Builder templates, then clears the Elementor cache. Private and scheduled pages are left alone. **Undo publish** puts them back the way they were for 14 days afterwards.
+
+**All Locations** has a **Launch** column: **Live**, **Ready**, or how many items are left.
+
+From SSH: `wp smc location checklist kenton` shows the checklist, and `wp smc location publish kenton` publishes (same rules; tick the manual checks in wp-admin first).
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:
@@ -351,6 +367,7 @@ add_filter( 'smc_location_cloner_defaults', function ( $d ) {
 - Create the location's JotForm, if you haven't yet, and set `booking_link`.
 - Write the location's nearby-city pages. These are excluded from the clone on purpose.
 - Add links from the corporate header or menu, if the site has one.
+- Work through the **Launch checklist** on the location's edit screen, then click **Publish location**.
 
 ## Warnings you might see
 

@@ -282,6 +282,86 @@ class SMC_Location_Command {
 	}
 
 	/**
+	 * Shows a location's launch checklist.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <slug>
+	 * : The location's slug, e.g. kenton.
+	 *
+	 * [--format=<format>]
+	 * : table, csv or json. Default table.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp smc location checklist kenton
+	 */
+	public function checklist( $args, $assoc ) {
+		$term = $this->launch_term( $args[0] );
+		$c    = SMC_Location_Launch::checks( $term );
+		$rows = [];
+		foreach ( $c['items'] as $i ) {
+			$rows[] = [
+				'status' => strtoupper( 'fail' === $i['status'] ? 'todo' : $i['status'] ),
+				'group'  => SMC_Location_Launch::GROUPS[ $i['group'] ],
+				'check'  => $i['label'],
+				'detail' => trim( preg_replace( '/\s+/', ' ', html_entity_decode( wp_strip_all_tags( preg_replace( '#<details.*</details>#s', '', $i['detail'] ) ) ) ) ),
+			];
+		}
+		WP_CLI\Utils\format_items( $assoc['format'] ?? 'table', $rows, [ 'status', 'group', 'check', 'detail' ] );
+		if ( $c['live'] ) {
+			WP_CLI::success( "{$term->name} is live." );
+		} elseif ( $c['fails'] ) {
+			WP_CLI::warning( "{$c['fails']} to do before {$term->name} can be published. Manual checks are ticked on the location's edit screen." );
+		} else {
+			WP_CLI::success( sprintf( 'Ready. Publish with: wp smc location publish %s (%d page(s), %d template(s))', $term->slug, count( $c['publish']['pages'] ), count( $c['publish']['templates'] ) ) );
+		}
+	}
+
+	/**
+	 * Publishes a location's draft pages and templates, if its launch checklist has nothing left to do.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <slug>
+	 * : The location's slug, e.g. kenton.
+	 *
+	 * [--yes]
+	 * : Don't ask for confirmation.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp smc location publish kenton
+	 */
+	public function publish( $args, $assoc ) {
+		$term = $this->launch_term( $args[0] );
+		$c    = SMC_Location_Launch::checks( $term );
+		if ( $c['fails'] ) {
+			WP_CLI::error( "{$c['fails']} item(s) still to do. Run: wp smc location checklist {$term->slug}" );
+		}
+		foreach ( array_merge( $c['publish']['templates'], $c['publish']['pages'] ) as $p ) {
+			WP_CLI::log( "  #{$p->ID} {$p->post_title} ({$p->post_status})" );
+		}
+		WP_CLI::confirm( "Publish these for {$term->name}?", $assoc );
+		$res = SMC_Location_Launch::publish( $term );
+		if ( is_string( $res ) ) {
+			WP_CLI::error( $res );
+		}
+		foreach ( $res['warnings'] as $w ) {
+			WP_CLI::warning( $w );
+		}
+		WP_CLI::success( "Published {$res['pages']} page(s) and {$res['templates']} template(s). Undo from the location's edit screen within " . SMC_Location_Launch::UNDO_DAYS . ' days.' );
+	}
+
+	private function launch_term( $slug ) {
+		$term = get_term_by( 'slug', sanitize_title( $slug ), 'location_category' );
+		if ( ! $term ) {
+			WP_CLI::error( "No location with the slug \"$slug\"." );
+		}
+		return $term;
+	}
+
+	/**
 	 * Finds location details typed into templates and pages instead of coming from the location shortcodes.
 	 *
 	 * ## OPTIONS

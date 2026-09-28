@@ -382,7 +382,7 @@ class SMC_Location_Admin {
 			<li>Add the Google Map on the location's edit screen if you didn't paste one, and check the hours and social links.</li>
 			<li>Write the location's nearby-city pages (these are skipped on purpose).</li>
 			<li>Add the new office's reviews under Locations &gt; Reviews. Reviews and team members are never copied from another location.</li>
-			<li>Review the pages, then publish them.</li>
+			<li>Work through the <strong>Launch checklist</strong> on the location's edit screen (Locations &gt; All Locations &gt; Edit), then click <strong>Publish location</strong> to publish every page and template at once.</li>
 		</ul>
 		<?php
 		$this->render_report( $r, false );
