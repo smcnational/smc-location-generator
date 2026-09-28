@@ -73,7 +73,8 @@ The output has plain classes (`smc-location-hours`, `smc-location-social`, `smc-
 The plugin updates from its GitHub repository, like any plugin from WordPress.org: new versions show up under **Dashboard > Updates** and on the Plugins screen, with release notes under **View details**. **Locations > Settings > Updates** shows the installed and newest versions and has these options:
 - **Channel:** Stable, or Beta (pre-releases too) for staging sites.
 - **Automatic updates.**
-- **Access token:** needed while the repository is private. Adding it to `wp-config.php` as `SMC_LOCATIONS_GITHUB_TOKEN` is safer than saving it in the settings.
+
+The repository is public, so sites need no token or other setup. Two optional `wp-config.php` settings exist for special cases: `SMC_LOCATIONS_GITHUB_TOKEN` (if the repository is ever made private, or if a server with many sites hits GitHub's limit of 60 checks per hour per server) and `SMC_LOCATIONS_GITHUB_REPO` (to test with a different repository).
 
 How to publish a release is in `RELEASING.md`.
 
@@ -86,8 +87,6 @@ With WP-CLI:
 ```bash
 wp plugin install smc-location-generator.zip --activate
 ```
-
-If the repository is private, add the access token before the first update check (see Updates).
 
 **Upgrading a site that has the older `smc-location-cloner` folder:** deactivate and delete **SMC Locations**, then install `smc-location-generator.zip`. Locations, reviews, brand settings and all other data are kept; only the plugin's files are replaced.
 
