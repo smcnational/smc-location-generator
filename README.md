@@ -138,6 +138,26 @@ When nothing is red, **Publish location** publishes every draft or pending page 
 
 From SSH: `wp smc location checklist kenton` shows the checklist, and `wp smc location publish kenton` publishes (same rules; tick the manual checks in wp-admin first).
 
+## Yoast variables
+
+Location details can go straight into Yoast SEO titles, meta descriptions and social titles as variables. Each page shows its own location's details, so cloned pages need no swapping, and editing a location updates every title that uses it.
+
+| Variable | Example |
+|---|---|
+| `%%location_city%%` | Springfield |
+| `%%location_state%%` | ST |
+| `%%location_city_state%%` | Springfield, ST |
+| `%%location_name%%` | the location's name |
+| `%%location_phone%%` | 555-555-0100 |
+| `%%location_address%%` | 123 Main St, Springfield, ST 12345 |
+| `%%location_street%%` | 123 Main St |
+| `%%location_zip%%` | 12345 |
+| `%%location_email%%` | the location's email |
+
+For example: `Dentist in %%location_city_state%% | %%sitename%%`. They also work in Yoast's default templates under **Yoast SEO > Settings > Content types > Pages**, so pages with no title of their own get their location's details too. Yoast's snippet preview and **Insert variable** list show them with the page's real values. They're empty on pages with no location. Focus keyphrases don't support variables (a Yoast limit), so those are still swapped by the clone as before. Each location's edit screen lists the variables (click to copy).
+
+**Converting existing pages:** `wp smc location yoast-vars` lists every typed-in city, phone, address and so on in the locations' Yoast fields and what it would become. Nothing changes until you add `--apply`. Limit it to some locations with their slugs: `wp smc location yoast-vars springfield --apply`.
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:

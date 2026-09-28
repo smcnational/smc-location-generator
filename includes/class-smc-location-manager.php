@@ -554,6 +554,8 @@ class SMC_Location_Manager {
 		<div class="notice notice-info inline smc-sc-box"><p>
 			Each field below shows the shortcode that displays it. Click a shortcode to copy it. Shortcodes show the details of the <em>page's</em> location, so the same shortcode works on every location's pages.
 			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="doctors"]</code> its doctors &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="team"]</code> its team &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
+		</p><p>
+			In Yoast SEO titles and descriptions: <?php foreach ( array_keys( SMC_Location_Yoast::vars() ) as $yv ) : ?><code class="smc-copy" title="Click to copy">%%<?php echo esc_html( $yv ); ?>%%</code> <?php endforeach; ?>
 		</p></div>
 
 		<?php SMC_Location_Launch::render( $term ); ?>

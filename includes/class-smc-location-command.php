@@ -353,6 +353,54 @@ class SMC_Location_Command {
 		WP_CLI::success( "Published {$res['pages']} page(s) and {$res['templates']} template(s). Undo from the location's edit screen within " . SMC_Location_Launch::UNDO_DAYS . ' days.' );
 	}
 
+	/**
+	 * Swaps location details typed into Yoast titles and descriptions for location variables,
+	 * e.g. "Dentist in Springfield, ST" becomes "Dentist in %%location_city_state%%".
+	 * Shows the changes only, unless --apply is given.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<slug>...]
+	 * : Locations to convert. Default: all of them.
+	 *
+	 * [--apply]
+	 * : Save the changes. Without it, nothing is changed.
+	 *
+	 * [--format=<format>]
+	 * : table, csv or json. Default table.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp smc location yoast-vars
+	 *     wp smc location yoast-vars springfield --apply
+	 *
+	 * @subcommand yoast-vars
+	 */
+	public function yoast_vars( $args, $assoc ) {
+		$terms = $args ? array_map( [ $this, 'launch_term' ], $args ) : SMC_Location_Manager::locations();
+		$all   = [];
+		foreach ( $terms as $term ) {
+			foreach ( SMC_Location_Yoast::conversions( $term ) as $r ) {
+				$all[] = $r;
+			}
+		}
+		if ( ! $all ) {
+			WP_CLI::success( 'Nothing to change. No typed-in location details found in Yoast fields.' );
+			return;
+		}
+		$cut = fn( $s ) => mb_strlen( $s ) > 60 ? mb_substr( $s, 0, 57 ) . '...' : $s;
+		WP_CLI\Utils\format_items(
+			$assoc['format'] ?? 'table',
+			array_map( fn( $r ) => [ 'id' => $r['id'], 'page' => $r['path'], 'field' => $r['field'], 'now' => $cut( $r['old'] ), 'becomes' => $cut( $r['new'] ) ], $all ),
+			[ 'id', 'page', 'field', 'now', 'becomes' ]
+		);
+		if ( empty( $assoc['apply'] ) ) {
+			WP_CLI::log( count( $all ) . ' change(s). Nothing saved. Add --apply to save them.' );
+			return;
+		}
+		WP_CLI::success( SMC_Location_Yoast::apply( $all ) . ' Yoast field(s) updated.' );
+	}
+
 	private function launch_term( $slug ) {
 		$term = get_term_by( 'slug', sanitize_title( $slug ), 'location_category' );
 		if ( ! $term ) {
