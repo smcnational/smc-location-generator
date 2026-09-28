@@ -670,6 +670,10 @@ class SMC_Location_Manager {
 			.smc-loc .smc-delete-btn { background: #b32d2e !important; border-color: #b32d2e !important; }
 			.smc-loc .notice.inline { margin: 1em 0; }
 			.smc-loc h2 label { font-size: inherit; }
+			/* Every single-line field on the location screens is the same height. */
+			.smc-loc input[type="text"], .smc-loc input[type="email"], .smc-loc input[type="url"], .smc-loc input[type="number"], .smc-loc input[type="search"], .smc-loc input:not([type]), .smc-loc select {
+				height: 36px; min-height: 36px; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; box-sizing: border-box; vertical-align: middle;
+			}
 		</style>
 		<?php
 	}

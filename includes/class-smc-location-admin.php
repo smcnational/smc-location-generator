@@ -572,6 +572,10 @@ class SMC_Location_Admin {
 			.smc-loc .notice.inline { margin: 1em 0; }
 			.smc-loc .smc-hours th { width: 120px; padding: 6px 10px 6px 0; }
 			.smc-loc .smc-hours td { padding: 6px 10px; }
+			/* Every single-line field on the location screens is the same height. */
+			.smc-loc input[type="text"], .smc-loc input[type="email"], .smc-loc input[type="url"], .smc-loc input[type="number"], .smc-loc input[type="search"], .smc-loc input:not([type]), .smc-loc select {
+				height: 36px; min-height: 36px; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; box-sizing: border-box; vertical-align: middle;
+			}
 		</style>
 		<?php
 	}
