@@ -167,6 +167,33 @@ New locations start with no reviews; they're never copied from another location.
 - **Fonts:** the font and weight for each global font. The list comes from Elementor (Google Fonts, system fonts, custom fonts) with a live preview. Sizes, line height and spacing stay as set in Elementor.
 - **Restore:** every save keeps the previous logo, favicon, colors and fonts (the last 10 saves), each with color swatches. **Restore** puts one back.
 
+## Export / Import
+
+**Locations > Export / Import** moves a site's location data to another site in one file: staging to live, or into a new client site built from the starter template.
+
+**Export:** tick what to include, then click **Download export file**:
+- **Locations:** every detail (address, phone, email, hours, social, map, forms, booking button).
+- **Reviews:** with their locations.
+- **Brand:** logo, mobile logo and favicon, with the image files included, plus the colors and fonts.
+- **Settings:** hours format, heights, button text and so on.
+
+**Import:** upload the file. Before anything changes, you see what's in it and what it will do: which locations are new and which already exist, how many reviews are new, and the brand's colors and fonts. Untick anything you don't want, then click **Import**.
+- **Locations** are matched by their slug. An existing location is updated in place (or left alone if you choose), so its ID stays the same and templates and reviews pointing at it keep working.
+- **Reviews** are never duplicated. A review already on the site gets the file's locations added to it.
+- **Brand** replaces the logo, favicon, colors and fonts. The previous brand is kept under **Brand > Restore**. Images already imported once are reused, not uploaded again.
+
+Pages, Theme Builder templates and menus aren't included; those move with the site itself (or come from Add Location).
+
+From WP-CLI:
+
+```bash
+wp smc location export                                   # everything, to smc-locations-<site>-<date>.json
+wp smc location export --sections=locations,reviews
+wp smc location import smc-locations-staging-2026-09-28.json --dry-run
+wp smc location import site.json --sections=brand --yes
+wp smc location import site.json --keep-existing          # only add new locations
+```
+
 ## Scan for typed-in details
 
 **Locations > Scan** finds location details that are typed into Elementor templates and pages instead of coming from the shortcodes:
