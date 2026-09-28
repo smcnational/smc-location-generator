@@ -489,6 +489,10 @@ class SMC_Location_Manager {
 		<?php endif; ?>
 		<hr class="wp-header-end">
 		<p><a href="<?php echo esc_url( self::url() ); ?>">&larr; All locations</a></p>
+		<div class="notice notice-info inline smc-sc-box"><p>
+			Each field below shows the shortcode that displays it. Click a shortcode to copy it. Shortcodes show the details of the <em>page's</em> location, so the same shortcode works on every location's pages.
+			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
+		</p></div>
 
 		<form method="post">
 			<?php wp_nonce_field( "smc_loc_save_$tid" ); ?>
@@ -499,46 +503,46 @@ class SMC_Location_Manager {
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="name">Name</label></th>
 					<td><input name="name" id="name" class="regular-text" required value="<?php echo $v( 'name', $term->name ); ?>">
-					<p class="description">Shown by <code>[location field="name"]</code>. Renaming doesn't change page URLs or page content.</p></td></tr>
+					<p class="description">Renaming doesn't change page URLs or page content.</p><?php echo SMC_Location_Fields::help( 'name' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="street">Street address</label></th>
-					<td><input name="street" id="street" class="regular-text" value="<?php echo $v( 'street', $addr[0] ?? '' ); ?>"></td></tr>
+					<td><input name="street" id="street" class="regular-text" value="<?php echo $v( 'street', $addr[0] ?? '' ); ?>"><?php echo SMC_Location_Fields::help( 'street' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="city_state_zip">City, state and zip</label></th>
-					<td><input name="city_state_zip" id="city_state_zip" class="regular-text" value="<?php echo $v( 'city_state_zip', $addr[1] ?? '' ); ?>"></td></tr>
+					<td><input name="city_state_zip" id="city_state_zip" class="regular-text" value="<?php echo $v( 'city_state_zip', $addr[1] ?? '' ); ?>"><?php echo SMC_Location_Fields::help( 'city_state_zip' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="city_state">City and state</label></th>
-					<td><input name="city_state" id="city_state" class="regular-text" value="<?php echo $v( 'city_state', $m( 'city_state' ) ); ?>" placeholder="Kenton, OH"></td></tr>
+					<td><input name="city_state" id="city_state" class="regular-text" value="<?php echo $v( 'city_state', $m( 'city_state' ) ); ?>" placeholder="Kenton, OH"><?php echo SMC_Location_Fields::help( 'city_state' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="phone">Phone</label></th>
 					<td><input name="phone" id="phone" class="regular-text" value="<?php echo $v( 'phone', $m( 'phone_label' ) ); ?>">
-					<p class="description">The tap-to-call link is updated to match.</p></td></tr>
+					<p class="description">The tap-to-call link is updated to match.</p><?php echo SMC_Location_Fields::help( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="email">Email</label></th>
 					<td><input name="email" id="email" type="email" class="regular-text" value="<?php echo $v( 'email', $m( 'email' ) ); ?>">
-					<p class="description">Show it with <code>[location field="email"]</code>. For an "Email Us" button, set the button's link to the dynamic Shortcode tag <code>[location field="email_link"]</code>.</p></td></tr>
+					<?php echo SMC_Location_Fields::help( 'email' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="email_label">Email button text</label></th>
 					<td><input name="email_label" id="email_label" class="regular-text" value="<?php echo $v( 'email_label', $m( 'email_label' ) ); ?>" placeholder="<?php echo esc_attr( SMC_Location_Settings::get( 'email_label_default' ) ); ?>">
-					<p class="description">Set the button's text to the dynamic Shortcode tag <code>[location field="email_label"]</code>. Leave blank to use the site default (shown in grey).</p></td></tr>
+					<p class="description">Leave blank to use the site default (shown in grey).</p><?php echo SMC_Location_Fields::help( 'email_label' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 			</table>
 
 			<h2>Booking button</h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="booking_label">Button text</label></th>
-					<td><input name="booking_label" id="booking_label" class="regular-text" value="<?php echo $v( 'booking_label', $m( 'booking_label' ) ); ?>"></td></tr>
+					<td><input name="booking_label" id="booking_label" class="regular-text" value="<?php echo $v( 'booking_label', $m( 'booking_label' ) ); ?>"><?php echo SMC_Location_Fields::help( 'booking_label' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="booking_link">Booking link</label></th>
-					<td><input name="booking_link" id="booking_link" type="url" class="large-text" value="<?php echo $v( 'booking_link', $m( 'booking_link' ) ); ?>"></td></tr>
+					<td><input name="booking_link" id="booking_link" type="url" class="large-text" value="<?php echo $v( 'booking_link', $m( 'booking_link' ) ); ?>"><?php echo SMC_Location_Fields::help( 'booking_link' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="booking_classes">Button CSS classes</label></th>
 					<td><input name="booking_classes" id="booking_classes" class="regular-text code" value="<?php echo $v( 'booking_classes', $m( 'booking_classes' ) ); ?>">
-					<p class="description">Usually <code>jotformButton</code>, which opens the JotForm popup.</p></td></tr>
+					<p class="description">Usually <code>jotformButton</code>, which opens the JotForm popup.</p><?php echo SMC_Location_Fields::help( 'booking_classes' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="form_embed">Embedded form</label></th>
 					<td><textarea name="form_embed" id="form_embed" rows="2" class="large-text code" placeholder="<?php echo esc_attr( $m( 'booking_link' ) ? 'Blank: embeds the booking form above' : 'https://form.jotform.com/...' ); ?>"><?php echo esc_textarea( null !== $post ? ( $post['form_embed'] ?? '' ) : SMC_Location_Fields::form_url( $m( 'form_embed' ) ) ); ?></textarea>
-					<p class="description">The form shown by <code>[location_form]</code> on contact pages and popups. Paste the JotForm link, form ID, or embed code. Leave blank to embed the booking form.</p></td></tr>
+					<p class="description">The form for contact pages and popups. Paste the JotForm link, form ID, or embed code. Leave blank to embed the booking form.</p><?php echo SMC_Location_Fields::help( 'form_embed' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 			</table>
 
 			<h2>Hours</h2>
 			<table class="form-table smc-hours" role="presentation">
 				<?php foreach ( SMC_Location_Fields::DAYS as $d => $label ) : ?>
 					<tr><th scope="row"><label for="hours_<?php echo esc_attr( $d ); ?>"><?php echo esc_html( $label ); ?></label></th>
-						<td><input name="hours[<?php echo esc_attr( $d ); ?>]" id="hours_<?php echo esc_attr( $d ); ?>" class="regular-text" value="<?php echo $sub( 'hours', $d, $m( "hours_$d" ) ); ?>" placeholder="<?php echo in_array( $d, [ 'saturday', 'sunday' ], true ) ? 'Closed' : '8:00 AM - 5:00 PM'; ?>"></td></tr>
+						<td><input name="hours[<?php echo esc_attr( $d ); ?>]" id="hours_<?php echo esc_attr( $d ); ?>" class="regular-text" value="<?php echo $sub( 'hours', $d, $m( "hours_$d" ) ); ?>" placeholder="<?php echo in_array( $d, [ 'saturday', 'sunday' ], true ) ? 'Closed' : '8:00 AM - 5:00 PM'; ?>"><?php echo SMC_Location_Fields::help( "hours_$d" ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<?php endforeach; ?>
 				<tr><th scope="row"><label for="hours_note">Note</label></th>
-					<td><input name="hours[note]" id="hours_note" class="large-text" value="<?php echo $sub( 'hours', 'note', $m( 'hours_note' ) ); ?>"></td></tr>
+					<td><input name="hours[note]" id="hours_note" class="large-text" value="<?php echo $sub( 'hours', 'note', $m( 'hours_note' ) ); ?>"><?php echo SMC_Location_Fields::help( 'hours_note' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 			</table>
 			<p class="description">Leave a day blank to leave it off the list, or type <code>Closed</code> to show it as closed.</p>
 
@@ -546,7 +550,7 @@ class SMC_Location_Manager {
 			<table class="form-table" role="presentation">
 				<?php foreach ( SMC_Location_Fields::SOCIAL as $k => $label ) : ?>
 					<tr><th scope="row"><label for="social_<?php echo esc_attr( $k ); ?>"><?php echo esc_html( 'google_business_url' === $k ? 'Google Business Profile' : $label ); ?></label></th>
-						<td><input name="social[<?php echo esc_attr( $k ); ?>]" id="social_<?php echo esc_attr( $k ); ?>" type="url" class="large-text" value="<?php echo $sub( 'social', $k, $m( $k ) ); ?>"></td></tr>
+						<td><input name="social[<?php echo esc_attr( $k ); ?>]" id="social_<?php echo esc_attr( $k ); ?>" type="url" class="large-text" value="<?php echo $sub( 'social', $k, $m( $k ) ); ?>"><?php echo SMC_Location_Fields::help( $k ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<?php endforeach; ?>
 			</table>
 
@@ -558,7 +562,7 @@ class SMC_Location_Manager {
 					<?php if ( $map ) : ?>
 						<iframe src="<?php echo esc_url( $map ); ?>" class="smc-map-preview" loading="lazy" title="Current map"></iframe>
 					<?php endif; ?>
-					</td></tr>
+					<?php echo SMC_Location_Fields::help( 'map' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 			</table>
 
 			<?php submit_button( 'Save location' ); ?>

@@ -73,7 +73,8 @@ The output has plain classes (`smc-location-hours`, `smc-location-social`, `smc-
 The plugin updates from its GitHub repository, like any plugin from WordPress.org: new versions show up under **Dashboard > Updates** and on the Plugins screen, with release notes under **View details**. **Locations > Settings > Updates** shows the installed and newest versions and has these options:
 - **Channel:** Stable, or Beta (pre-releases too) for staging sites.
 - **Automatic updates.**
-- **Access token:** needed while the repository is private. Adding it to `wp-config.php` as `SMC_LOCATIONS_GITHUB_TOKEN` is safer than saving it in the settings.
+
+The repository is public, so sites need no token or other setup. Two optional `wp-config.php` settings exist for special cases: `SMC_LOCATIONS_GITHUB_TOKEN` (if the repository is ever made private, or if a server with many sites hits GitHub's limit of 60 checks per hour per server) and `SMC_LOCATIONS_GITHUB_REPO` (to test with a different repository).
 
 How to publish a release is in `RELEASING.md`.
 
@@ -87,13 +88,13 @@ With WP-CLI:
 wp plugin install smc-location-generator.zip --activate
 ```
 
-If the repository is private, add the access token before the first update check (see Updates).
-
 **Upgrading a site that has the older `smc-location-cloner` folder:** deactivate and delete **SMC Locations**, then install `smc-location-generator.zip`. Locations, reviews, brand settings and all other data are kept; only the plugin's files are replaced.
 
 ## Manage locations
 
 **Locations > All Locations** lists every location on the site. For each one it shows the address, phone, how many days of hours are set, whether it has a map and social links, its main page with a page count, and when it was added. Anything missing is shown in red.
+
+**Shortcode help:** every field on a location's Edit screen, and in the category editor, shows the shortcode that displays it, for example `[location field="phone_label"]` for the text and `[location field="phone_link"]` for the tap-to-call link. Click a shortcode to copy it. Review fields show the `[review]` shortcodes for Loop Item templates the same way.
 
 Hover over a location for these links:
 - **Edit:** one screen for everything about the location: name, address, city/state, phone (the tap-to-call link updates to match), booking button, hours, social links, and the map, with a preview. For any other fields a site has, there's a link to the regular category editor.
@@ -167,6 +168,33 @@ New locations start with no reviews; they're never copied from another location.
 - **Colors:** the four global colors (Primary, Secondary, Text, Accent) plus any custom colors, with color pickers. Rename them, add more, or remove custom ones. Values are hex codes; rgb/rgba also work.
 - **Fonts:** the font and weight for each global font. The list comes from Elementor (Google Fonts, system fonts, custom fonts) with a live preview. Sizes, line height and spacing stay as set in Elementor.
 - **Restore:** every save keeps the previous logo, favicon, colors and fonts (the last 10 saves), each with color swatches. **Restore** puts one back.
+
+## Export / Import
+
+**Locations > Export / Import** moves a site's location data to another site in one file: staging to live, or into a new client site built from the starter template.
+
+**Export:** tick what to include, then click **Download export file**:
+- **Locations:** every detail (address, phone, email, hours, social, map, forms, booking button).
+- **Reviews:** with their locations.
+- **Brand:** logo, mobile logo and favicon, with the image files included, plus the colors and fonts.
+- **Settings:** hours format, heights, button text and so on.
+
+**Import:** upload the file. Before anything changes, you see what's in it and what it will do: which locations are new and which already exist, how many reviews are new, and the brand's colors and fonts. Untick anything you don't want, then click **Import**.
+- **Locations** are matched by their slug. An existing location is updated in place (or left alone if you choose), so its ID stays the same and templates and reviews pointing at it keep working.
+- **Reviews** are never duplicated. A review already on the site gets the file's locations added to it.
+- **Brand** replaces the logo, favicon, colors and fonts. The previous brand is kept under **Brand > Restore**. Images already imported once are reused, not uploaded again.
+
+Pages, Theme Builder templates and menus aren't included; those move with the site itself (or come from Add Location).
+
+From WP-CLI:
+
+```bash
+wp smc location export                                   # everything, to smc-locations-<site>-<date>.json
+wp smc location export --sections=locations,reviews
+wp smc location import smc-locations-staging-2026-09-28.json --dry-run
+wp smc location import site.json --sections=brand --yes
+wp smc location import site.json --keep-existing          # only add new locations
+```
 
 ## Scan for typed-in details
 

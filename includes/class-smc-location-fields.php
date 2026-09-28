@@ -44,6 +44,10 @@ class SMC_Location_Fields {
 		add_action( 'acf/init', [ __CLASS__, 'register_fields' ] );
 		add_action( 'init', [ __CLASS__, 'register_shortcodes' ], 20 );
 		add_filter( 'elementor/widget/render_content', [ __CLASS__, 'hide_empty_social' ], 10, 2 );
+		// Shortcode help under each location field (ACF category editor + copy on click).
+		add_filter( 'acf/prepare_field', [ __CLASS__, 'acf_help' ] );
+		add_action( 'admin_footer', [ __CLASS__, 'copy_script' ] );
+
 		add_filter( 'elementor/widget/render_content', [ __CLASS__, 'fix_email_links' ], 5 );
 		add_filter( 'the_content', [ __CLASS__, 'fix_email_links' ], 20 );
 		add_filter( 'elementor/widget/render_content', [ __CLASS__, 'hide_empty_button' ], 10, 2 );
@@ -239,7 +243,7 @@ class SMC_Location_Fields {
 			'label'        => 'Email address',
 			'name'         => 'email',
 			'type'         => 'email',
-			'instructions' => 'Used by [location field="email"] for the address and [location field="email_link"] for a mailto: link, e.g. on an "Email Us" button.',
+			'instructions' => 'The office\'s email address.',
 			'wrapper'      => [ 'width' => '50' ],
 		];
 		$f[] = [
@@ -248,7 +252,7 @@ class SMC_Location_Fields {
 			'name'         => 'email_label',
 			'type'         => 'text',
 			'placeholder'  => 'Email Us',
-			'instructions' => 'Shown by [location field="email_label"]. Leave blank to use the site default from Locations > Settings.',
+			'instructions' => 'Leave blank to use the site default from Locations > Settings.',
 			'wrapper'      => [ 'width' => '50' ],
 		];
 
@@ -290,7 +294,7 @@ class SMC_Location_Fields {
 			'type'         => 'textarea',
 			'rows'         => 3,
 			'new_lines'    => '',
-			'instructions' => 'The JotForm to embed with [location_form] on contact pages, popups, etc. Paste the form link or its embed code (Publish > Embed). Leave blank to embed the booking form.',
+			'instructions' => 'The JotForm for contact pages, popups, etc. Paste the form link or its embed code (Publish > Embed). Leave blank to embed the booking form.',
 		];
 
 		$f[] = [ 'key' => 'field_smc_loc_tab_map', 'label' => 'Map', 'type' => 'tab' ];
@@ -336,6 +340,115 @@ class SMC_Location_Fields {
 	}
 
 	/** Location term for a shortcode: location="slug" if given, else the current page's location. */
+	/* ========== Shortcode help ========== */
+
+	/**
+	 * Which shortcode shows each field. Each entry: [ [ label, shortcode ], ... ].
+	 * "street" and "city_state_zip" are the Edit screen's two halves of "address".
+	 */
+	public static function help_map() {
+		$map = [
+			'name'            => [ [ '', '[location field="name"]' ] ],
+			'city_state'      => [ [ '', '[location field="city_state"]' ] ],
+			'address'         => [ [ '', '[location field="address"]' ], [ 'always one line', '[location field="address" format="inline"]' ] ],
+			'street'          => [ [ 'full address', '[location field="address"]' ], [ 'one line', '[location field="address" format="inline"]' ] ],
+			'city_state_zip'  => [ [ 'full address', '[location field="address"]' ] ],
+			'phone_label'     => [ [ 'text', '[location field="phone_label"]' ], [ 'tap-to-call link', '[location field="phone_link"]' ] ],
+			'phone'           => [ [ 'text', '[location field="phone_label"]' ], [ 'tap-to-call link', '[location field="phone_link"]' ] ],
+			'phone_link'      => [ [ 'link', '[location field="phone_link"]' ] ],
+			'email'           => [ [ 'address', '[location field="email"]' ], [ 'button link', '[location field="email_link"]' ] ],
+			'email_label'     => [ [ 'button text', '[location field="email_label"]' ] ],
+			'booking_label'   => [ [ 'button text', '[location field="booking_label"]' ] ],
+			'booking_link'    => [ [ 'button link', '[location field="booking_link"]' ] ],
+			'booking_classes' => [ [ 'in the button\'s CSS Classes (Advanced tab)', '[location field="booking_classes"]' ] ],
+			'hours_note'      => [ [ 'shown under', '[location_hours]' ], [ 'on its own', '[location field="hours_note"]' ] ],
+			'map_embed'       => [ [ '', '[location_map]' ] ],
+			'map'             => [ [ '', '[location_map]' ] ],
+			'form_embed'      => [ [ '', '[location_form]' ] ],
+		];
+		foreach ( array_keys( self::DAYS ) as $d ) {
+			$map[ "hours_$d" ] = [ [ 'all hours', '[location_hours]' ], [ 'this day', "[location field=\"hours_$d\"]" ] ];
+		}
+		foreach ( array_keys( self::SOCIAL ) as $k ) {
+			$map[ $k ] = [ [ 'Social Icons link', "[location field=\"$k\"]" ], [ 'all links', '[location_social]' ] ];
+		}
+		return $map;
+	}
+
+	/** "Shortcode: [..] (text) · [..] (link)" with click-to-copy codes, or ''. */
+	public static function help( $name, $tag = 'p' ) {
+		$map = self::help_map();
+		if ( empty( $map[ $name ] ) ) {
+			return '';
+		}
+		$parts = [];
+		foreach ( $map[ $name ] as list( $label, $code ) ) {
+			$parts[] = '<code class="smc-copy" title="Click to copy">' . esc_html( $code ) . '</code>' . ( $label ? ' <span class="smc-sc-label">' . esc_html( $label ) . '</span>' : '' );
+		}
+		$html = '<span class="smc-sc-title">' . ( count( $parts ) > 1 ? 'Shortcodes:' : 'Shortcode:' ) . '</span> ' . implode( ' &nbsp;&middot;&nbsp; ', $parts );
+		return $tag ? "<$tag class=\"description smc-sc\">$html</$tag>" : $html;
+	}
+
+	/** Adds the shortcode line to location fields in the category editor. */
+	public static function acf_help( $field ) {
+		if ( ! is_array( $field ) || empty( $field['name'] ) || ! is_admin() ) {
+			return $field;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && 'smc_review' === ( $screen->post_type ?? '' ) ) {
+			// Review fields: the [review] shortcode for Loop Item templates.
+			$review = [ 'rating' => [ '[review field="stars"]', '[review field="rating"]' ], 'review_date' => [ '[review field="date"]' ], 'source' => [ '[review field="source"]' ], 'review_link' => [ '[review field="link"]' ] ];
+			if ( isset( $review[ $field['name'] ] ) ) {
+				$codes                 = array_map( fn( $c ) => '<code class="smc-copy" title="Click to copy">' . esc_html( $c ) . '</code>', $review[ $field['name'] ] );
+				$field['instructions'] = trim( $field['instructions'] . ( $field['instructions'] ? '<br>' : '' ) . '<span class="smc-sc-title">In a Loop Item template:</span> ' . implode( ' &nbsp;&middot;&nbsp; ', $codes ) );
+			}
+			return $field;
+		}
+		if ( ! $screen || self::TAX !== ( $screen->taxonomy ?? '' ) ) {
+			return $field;
+		}
+		$help = self::help( $field['name'], '' );
+		if ( $help && false === strpos( (string) $field['instructions'], '[location' ) ) {
+			$field['instructions'] = trim( $field['instructions'] . ( $field['instructions'] ? '<br>' : '' ) . $help );
+		}
+		return $field;
+	}
+
+	/** Click a shortcode to copy it (location screens only). */
+	public static function copy_script() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || ( self::TAX !== ( $screen->taxonomy ?? '' ) && 'smc_review' !== ( $screen->post_type ?? '' ) && false === strpos( (string) $screen->id, 'smc-' ) && false === strpos( (string) $screen->id, 'locations' ) ) ) {
+			return;
+		}
+		?>
+		<style>
+			code.smc-copy { cursor: pointer; }
+			code.smc-copy:hover { background: #dcdcde; }
+			code.smc-copy.smc-copied { background: #d1f0d6; }
+			.smc-sc { margin-top: 4px; }
+			.smc-sc-title { font-weight: 600; }
+			.smc-sc-label { color: #646970; }
+		</style>
+		<script>
+		document.addEventListener( 'click', function ( e ) {
+			var el = e.target.closest ? e.target.closest( 'code.smc-copy' ) : null;
+			if ( ! el ) { return; }
+			var text = el.textContent, done = function () {
+				el.classList.add( 'smc-copied' ); el.setAttribute( 'title', 'Copied' );
+				setTimeout( function () { el.classList.remove( 'smc-copied' ); el.setAttribute( 'title', 'Click to copy' ); }, 1200 );
+			};
+			if ( navigator.clipboard && window.isSecureContext ) {
+				navigator.clipboard.writeText( text ).then( done );
+			} else {
+				var t = document.createElement( 'textarea' ); t.value = text; document.body.appendChild( t ); t.select();
+				try { document.execCommand( 'copy' ); done(); } catch ( err ) {}
+				document.body.removeChild( t );
+			}
+		} );
+		</script>
+		<?php
+	}
+
 	/** Location term ID for the page being viewed, or 0. */
 	public static function current_location_id() {
 		return self::term_id( [] );

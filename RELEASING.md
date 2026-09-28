@@ -35,17 +35,12 @@ Tag with a suffix, e.g. Version `1.16.0-beta.1` and tag `v1.16.0-beta.1`. That's
 - `1.16.1`: fixes.
 - Never reuse a number. A site only updates to a higher version.
 
-## Private repository
+## Access
 
-Sites need a read-only token to see a private repo's releases. Create a **fine-grained personal access token** (or one on a machine account) with:
-- Resource owner: `smcnational`
-- Repository access: only this repository
-- Permissions: **Contents: Read-only**
-
-Put it in each site's `wp-config.php`, or in the plugin's settings (Locations > Settings > Updates):
+The repository is public, so sites check for updates without a token. If it's ever made private, each site needs a read-only token in `wp-config.php`:
 
 ```php
 define( 'SMC_LOCATIONS_GITHUB_TOKEN', 'github_pat_...' );
 ```
 
-Set an expiry reminder: when the token expires, sites stop seeing updates (Locations > Settings shows the error).
+(fine-grained token, resource owner `smcnational`, only this repository, **Contents: Read-only**).
