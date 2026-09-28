@@ -129,7 +129,7 @@ class SMC_Location_Brand {
 
 	/* ========== Elementor kit ========== */
 
-	public static function kit_id() {
+	private static function kit_id() {
 		$id = (int) get_option( 'elementor_active_kit' );
 		return $id && get_post( $id ) ? $id : 0;
 	}
@@ -159,7 +159,7 @@ class SMC_Location_Brand {
 	}
 
 	/** The brand-related part of the site's settings, for display and history. */
-	public static function snapshot() {
+	private static function snapshot() {
 		$s = self::kit_settings();
 		return [
 			'time'              => time(),
@@ -176,7 +176,7 @@ class SMC_Location_Brand {
 	}
 
 	/** Writes a snapshot back to Elementor and WordPress. */
-	public static function apply( array $b ) {
+	private static function apply( array $b ) {
 		$id = self::kit_id();
 		$s  = self::kit_settings();
 		foreach ( [ 'system_colors', 'custom_colors', 'system_typography', 'custom_typography' ] as $k ) {
@@ -208,7 +208,7 @@ class SMC_Location_Brand {
 		}
 	}
 
-	public static function push_history( array $snap ) {
+	private static function push_history( array $snap ) {
 		$h = (array) get_option( self::HISTORY, [] );
 		array_unshift( $h, $snap );
 		update_option( self::HISTORY, array_slice( $h, 0, 10 ), false );

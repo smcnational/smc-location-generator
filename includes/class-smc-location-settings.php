@@ -238,7 +238,7 @@ class SMC_Location_Settings {
 			'Starting height',
 			function () use ( $opt ) {
 				printf(
-					'<input name="%s[form_height]" id="form_height" class="small-text" style="width:7em" value="%s" placeholder="600px">',
+					'<input name="%s[form_height]" id="form_height" class="small-text" value="%s" placeholder="600px">',
 					esc_attr( $opt ),
 					esc_attr( self::get( 'form_height' ) )
 				);
@@ -262,7 +262,7 @@ class SMC_Location_Settings {
 			'Map height',
 			function () {
 				printf(
-					'<input name="%s[map_height]" id="map_height" class="small-text" style="width:7em" value="%s" placeholder="450px">',
+					'<input name="%s[map_height]" id="map_height" class="small-text" value="%s" placeholder="450px">',
 					esc_attr( self::OPTION ),
 					esc_attr( self::get( 'map_height' ) )
 				);
@@ -277,7 +277,7 @@ class SMC_Location_Settings {
 			'Map height on phones',
 			function () {
 				printf(
-					'<input name="%s[map_height_mobile]" id="map_height_mobile" class="small-text" style="width:7em" value="%s" placeholder="Same"><p class="description">Screens 767px wide and under. Leave blank to use the same height as above.</p>',
+					'<input name="%s[map_height_mobile]" id="map_height_mobile" class="small-text" value="%s" placeholder="Same"><p class="description">Screens 767px wide and under. Leave blank to use the same height as above.</p>',
 					esc_attr( self::OPTION ),
 					esc_attr( self::get( 'map_height_mobile' ) )
 				);

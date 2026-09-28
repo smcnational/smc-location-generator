@@ -6,10 +6,9 @@
  * normal Plugins / Updates screens, like any plugin from WordPress.org. Private repositories
  * work with a read-only access token.
  *
- * The repository is public, so no setup is needed. Optional overrides in wp-config.php:
- *   define( 'SMC_LOCATIONS_GITHUB_REPO', 'owner/repo' );          // a fork or test repo
- *   define( 'SMC_LOCATIONS_GITHUB_TOKEN', 'github_pat_...' );     // private repo, or to lift
- *                                                                  // GitHub's 60 checks/hour limit
+ * Configure in wp-config.php (preferred) or under Locations > Settings > Updates:
+ *   define( 'SMC_LOCATIONS_GITHUB_REPO', 'smcnational/smc-location-generator' );
+ *   define( 'SMC_LOCATIONS_GITHUB_TOKEN', 'github_pat_...' );
  *
  * Releases: a tag like v1.15.0 is a normal release; v1.15.0-beta.1 is a pre-release, offered
  * only to sites on the Beta channel (use it for staging). If the release has a .zip attached,
@@ -321,6 +320,37 @@ class SMC_Location_Updater {
 			'updates'
 		);
 
+		add_settings_field(
+			'smc_updates_token',
+			'GitHub access token',
+			function () use ( $opt ) {
+				if ( defined( 'SMC_LOCATIONS_GITHUB_TOKEN' ) && SMC_LOCATIONS_GITHUB_TOKEN ) {
+					echo '<p>Set in <code>wp-config.php</code>.</p>';
+					return;
+				}
+				$has = '' !== (string) self::options()['token'];
+				printf(
+					'<input type="password" name="%s[token]" class="regular-text" autocomplete="new-password" placeholder="%s"> %s<p class="description">Needed if the repository is private. Use a fine-grained token with read-only <em>Contents</em> access to just this repository. It\'s saved in the database; <code>define( \'SMC_LOCATIONS_GITHUB_TOKEN\', \'...\' );</code> in wp-config.php is safer.</p>',
+					esc_attr( $opt ),
+					$has ? 'Saved (leave blank to keep)' : 'github_pat_...',
+					$has ? sprintf( '<label><input type="checkbox" name="%s[clear_token]" value="1"> Remove</label>', esc_attr( $opt ) ) : ''
+				);
+			},
+			SMC_Location_Settings::PAGE,
+			'updates'
+		);
+
+		if ( ! defined( 'SMC_LOCATIONS_GITHUB_REPO' ) ) {
+			add_settings_field(
+				'smc_updates_repo',
+				'Repository',
+				function () use ( $opt, $o ) {
+					printf( '<input name="%s[repo]" value="%s" class="regular-text code" placeholder="%s">', esc_attr( $opt ), esc_attr( $o['repo'] ), esc_attr( self::DEFAULT_REPO ) );
+				},
+				SMC_Location_Settings::PAGE,
+				'updates'
+			);
+		}
 	}
 
 	public static function status() {
@@ -342,9 +372,6 @@ class SMC_Location_Updater {
 		}
 		echo '</td></tr>';
 		echo '<tr><td>Repository</td><td><a href="' . esc_url( 'https://github.com/' . self::repo() . '/releases' ) . '" target="_blank"><code>' . esc_html( self::repo() ) . '</code></a></td></tr>';
-		if ( self::token() ) {
-			echo '<tr><td>Access token</td><td>' . ( defined( 'SMC_LOCATIONS_GITHUB_TOKEN' ) && SMC_LOCATIONS_GITHUB_TOKEN ? 'Set in wp-config.php' : 'Saved in settings' ) . '</td></tr>';
-		}
 		if ( ! empty( $status['time'] ) ) {
 			echo '<tr><td>Last checked</td><td>' . esc_html( wp_date( 'M j, Y g:i a', $status['time'] ) ) . ' &nbsp;<a href="' . esc_url( admin_url( 'update-core.php?force-check=1' ) ) . '">Check now</a></td></tr>';
 		}
@@ -355,7 +382,7 @@ class SMC_Location_Updater {
 		$in  = (array) $in;
 		$old = self::options();
 		$out = [
-			'repo'    => isset( $in['repo'] ) && preg_match( '#^[\w.-]+/[\w.-]+$#', trim( (string) $in['repo'] ) ) ? trim( $in['repo'] ) : $old['repo'],
+			'repo'    => preg_match( '#^[\w.-]+/[\w.-]+$#', trim( (string) ( $in['repo'] ?? '' ) ) ) ? trim( $in['repo'] ) : '',
 			'channel' => 'beta' === ( $in['channel'] ?? '' ) ? 'beta' : 'stable',
 			'auto'    => empty( $in['auto'] ) ? 0 : 1,
 			'token'   => $old['token'],
