@@ -286,7 +286,7 @@ class SMC_Location_Reviews {
 	public static function elementor_query( $query ) {
 		$query->set( 'post_type', self::TYPE );
 		$query->set( 'post_status', 'publish' );
-		$tid = SMC_Location_Fields::current_location_id();
+		$tid = SMC_Location_Fields::listing_location_id();
 		if ( $tid ) {
 			$query->set( 'tax_query', [ [ 'taxonomy' => self::TAX, 'terms' => $tid ] ] );
 		}
@@ -323,6 +323,7 @@ class SMC_Location_Reviews {
 	 *   field="source"   Google, Facebook...
 	 *   field="date"     review date (format="F Y" by default, any PHP date format)
 	 *   field="link"     URL of the original review
+	 *   field="location" the office(s) the review is for
 	 */
 	public static function review_shortcode( $atts ) {
 		$a  = shortcode_atts( [ 'field' => 'text', 'words' => 0, 'format' => 'F Y', 'color' => '#f5a623' ], $atts, 'review' );
@@ -346,6 +347,9 @@ class SMC_Location_Reviews {
 				return esc_html( get_the_date( sanitize_text_field( $a['format'] ), $id ) );
 			case 'link':
 				return esc_url( (string) get_post_meta( $id, 'review_link', true ) );
+			case 'location':
+			case 'locations':
+				return SMC_Location_Fields::location_names( $id );
 			default:
 				$text = wp_strip_all_tags( get_post_field( 'post_content', $id ) );
 				if ( (int) $a['words'] > 0 ) {
@@ -366,6 +370,7 @@ class SMC_Location_Reviews {
 				'words'       => 0,
 				'show_rating' => 'yes',
 				'show_source' => 'yes',
+				'show_location' => 'auto',
 				'show_date'   => 'no',
 			],
 			$atts,
@@ -380,12 +385,11 @@ class SMC_Location_Reviews {
 			'order'          => 'DESC',
 			'no_found_rows'  => true,
 		];
-		if ( 'all' !== strtolower( $a['location'] ) ) {
-			$tid = '' !== $a['location'] ? ( get_term_by( 'slug', sanitize_title( $a['location'] ), self::TAX )->term_id ?? 0 ) : SMC_Location_Fields::current_location_id();
-			if ( $tid ) {
-				$args['tax_query'] = [ [ 'taxonomy' => self::TAX, 'terms' => (int) $tid ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
-			}
+		$tid = SMC_Location_Fields::listing_location_id( $a['location'] );
+		if ( $tid ) {
+			$args['tax_query'] = [ [ 'taxonomy' => self::TAX, 'terms' => $tid ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
 		}
+		$show_loc = 'auto' === strtolower( (string) ( $a['show_location'] ?? 'auto' ) ) ? ! $tid : in_array( strtolower( (string) $a['show_location'] ), [ 'yes', 'true', '1', 'on' ], true );
 		if ( (int) $a['min_rating'] > 1 ) {
 			$args['meta_query'] = [ [ 'key' => 'rating', 'value' => (int) $a['min_rating'], 'compare' => '>=', 'type' => 'NUMERIC' ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
 		}
@@ -417,6 +421,10 @@ class SMC_Location_Reviews {
 			if ( $yes( $a['show_source'] ) && $source ) {
 				$label = esc_html( $source );
 				$out  .= ' <span class="smc-review-source">' . ( $link ? '<a href="' . esc_url( $link ) . '" target="_blank" rel="noopener">' . $label . '</a>' : $label ) . '</span>';
+			}
+			$locs = $show_loc ? SMC_Location_Fields::location_names( $p->ID ) : '';
+			if ( '' !== $locs ) {
+				$out .= ' <span class="smc-review-location">' . $locs . '</span>';
 			}
 			if ( $yes( $a['show_date'] ) ) {
 				$out .= ' <span class="smc-review-date">' . esc_html( get_the_date( 'F Y', $p ) ) . '</span>';

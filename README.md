@@ -185,7 +185,7 @@ For a fully designed carousel or grid, use Elementor's **Loop Carousel** or **Lo
 - `location_reviews_random`: random order.
 - `location_reviews_5star`: 5-star only.
 
-On a page with no location (for example the corporate homepage), both ways show reviews from all locations.
+On Corporate pages (the main location on the site's homepage) and pages with no location, both ways show reviews from all locations, and `[location_reviews]` adds which office each review is for. Use `[review field="location"]` for that in a Loop Item, and `show_location="no"` to hide it.
 
 New locations start with no reviews; they're never copied from another location. Deleting a location trashes the reviews that belong only to it.
 
@@ -243,6 +243,8 @@ The list shows photos and can be filtered by location and by doctors or team. **
 **Menu anchors:** every profile has an anchor, so a menu item or button can jump straight to it, for example `/kenton/meet-the-doctors/#dr-jane-lee`. By default it's the name as a slug (`dr-jane-lee`); set **Menu anchor** on the person to change it. The Team list shows each anchor (click to copy). `[location_team]` adds the anchors automatically. In a Loop Item, add Elementor's **Menu Anchor** widget at the top of the card with `[team field="anchor_id"]` as the ID (it outputs just the text, e.g. `dr-jane-lee`). Don't use `[team field="anchor"]` there: that one outputs a full tag and is only for a plain Shortcode widget. Elementor's CSS ID field (Advanced tab) doesn't run shortcodes, so it won't work there.
 
 The page stops 120px above the profile so a sticky header doesn't cover it; change that with `offset="90"` on `[location_team]` or `[team field="anchor"]`. The Menu Anchor widget ignores that offset, so for it add `.elementor-menu-anchor { scroll-margin-top: 120px; }` to Site Settings > Custom CSS.
+
+**Corporate:** on Corporate pages (the main location on the homepage) everything shows every location's doctors and team, each person once even if they work at several offices. `[location_team]` adds the offices under each person's title there (`show_location="no"` to hide, `"yes"` to show it everywhere); in a Loop Item use `[team field="locations"]`, or `link="yes"` to link each office to its location page. Don't tick Corporate on team members or reviews; it isn't offered and isn't needed. A location counts as Corporate if its name or slug is `corporate`.
 
 Everything follows the page's location, so the Meet the Doctors and Meet the Team pages work for every location, including new clones. New locations start with no team; people are never copied from another location. Someone who works at two offices is added once, with both locations ticked. Deleting a location trashes the people who work only there. The team (with photos) is included in **Export / Import**, and **Scan** flags headings and profile boxes that still have a saved team member's name typed in.
 

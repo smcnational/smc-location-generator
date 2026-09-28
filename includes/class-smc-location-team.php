@@ -327,7 +327,7 @@ class SMC_Location_Team {
 		$query->set( 'post_type', self::TYPE );
 		$query->set( 'post_status', 'publish' );
 		$query->set( 'orderby', [ 'menu_order' => 'ASC', 'title' => 'ASC' ] );
-		$tid = SMC_Location_Fields::current_location_id();
+		$tid = SMC_Location_Fields::listing_location_id();
 		if ( $tid ) {
 			$query->set( 'tax_query', [ [ 'taxonomy' => self::TAX, 'terms' => $tid ] ] );
 		}
@@ -362,6 +362,7 @@ class SMC_Location_Team {
 				'photo'    => 'medium_large',
 				'shape'    => 'square',
 				'offset'   => '',
+				'show_location' => 'auto',
 			],
 			$atts,
 			'location_team'
@@ -374,12 +375,12 @@ class SMC_Location_Team {
 			'orderby'        => [ 'menu_order' => 'ASC', 'title' => 'ASC' ],
 			'no_found_rows'  => true,
 		];
-		if ( 'all' !== strtolower( $a['location'] ) ) {
-			$tid = '' !== $a['location'] ? ( get_term_by( 'slug', sanitize_title( $a['location'] ), self::TAX )->term_id ?? 0 ) : SMC_Location_Fields::current_location_id();
-			if ( $tid ) {
-				$args['tax_query'] = [ [ 'taxonomy' => self::TAX, 'terms' => (int) $tid ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
-			}
+		$tid = SMC_Location_Fields::listing_location_id( $a['location'] );
+		if ( $tid ) {
+			$args['tax_query'] = [ [ 'taxonomy' => self::TAX, 'terms' => $tid ] ]; // phpcs:ignore WordPress.DB.SlowDBQuery
 		}
+		// Which office each person is at: shown by default when listing every location (e.g. Corporate).
+		$show_loc = 'auto' === strtolower( $a['show_location'] ) ? ! $tid : in_array( strtolower( $a['show_location'] ), [ 'yes', 'true', '1', 'on' ], true );
 		$kind = self::normalize_kind( $a['type'] );
 		if ( $kind ) {
 			$args['meta_query'] = self::kind_query( $kind ); // phpcs:ignore WordPress.DB.SlowDBQuery
@@ -403,6 +404,10 @@ class SMC_Location_Team {
 			$title = (string) get_post_meta( $p->ID, 'job_title', true );
 			if ( '' !== $title ) {
 				$out .= '<div class="smc-team-title">' . esc_html( $title ) . '</div>';
+			}
+			$locs = $show_loc ? SMC_Location_Fields::location_names( $p->ID, true ) : '';
+			if ( '' !== $locs ) {
+				$out .= '<div class="smc-team-locations">' . $locs . '</div>';
 			}
 			if ( 'none' !== $a['bio'] && '' !== trim( $p->post_content ) ) {
 				$bio  = 'full' === $a['bio'] ? apply_filters( 'the_content', $p->post_content ) : wpautop( esc_html( wp_trim_words( wp_strip_all_tags( $p->post_content ), max( 5, (int) $a['words'] ) ) ) );
@@ -437,10 +442,11 @@ class SMC_Location_Team {
 
 	/**
 	 * [team field="..."] - one part of the current team member, for Elementor Loop Items.
-	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten), photo, photo_url
+	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten), photo, photo_url,
+	 *   locations (the offices they work at; link="yes" links each to its location page)
 	 */
 	public static function field_shortcode( $atts ) {
-		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large', 'offset' => '' ], $atts, 'team' );
+		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large', 'offset' => '', 'link' => '' ], $atts, 'team' );
 		$id = get_the_ID();
 		if ( ! $id || self::TYPE !== get_post_type( $id ) ) {
 			return '';
@@ -458,6 +464,9 @@ class SMC_Location_Team {
 				return esc_attr( self::anchor( $id ) );
 			case 'title':
 				return esc_html( (string) get_post_meta( $id, 'job_title', true ) );
+			case 'locations':
+			case 'location':
+				return SMC_Location_Fields::location_names( $id, in_array( strtolower( (string) $a['link'] ), [ 'yes', 'true', '1' ], true ) );
 			case 'type':
 				return esc_html( self::KINDS[ get_post_meta( $id, 'team_type', true ) ] ?? 'Team member' );
 			case 'photo':
@@ -486,6 +495,7 @@ class SMC_Location_Team {
 			. '.smc-team-circle .smc-team-photo img{border-radius:50%}'
 			. '.smc-team-name{font-weight:700;margin-top:14px;font-size:1.15em}'
 			. '.smc-team-title{opacity:.8;margin-top:2px}'
+			. '.smc-team-locations{font-size:.9em;opacity:.8;margin-top:2px}'
 			. '.smc-team-bio{margin-top:10px}.smc-team-bio p:last-child{margin-bottom:0}'
 			. '.smc-team-member,.smc-team-anchor{scroll-margin-top:var(--smc-anchor-offset,120px)}'
 			. '.smc-team-anchor{display:block;height:0;overflow:hidden}'

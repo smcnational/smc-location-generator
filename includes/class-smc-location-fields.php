@@ -449,6 +449,40 @@ class SMC_Location_Fields {
 		<?php
 	}
 
+	/** Whether a location term is the main (corporate) location: named or slugged "corporate". */
+	public static function is_corporate( $tid ) {
+		$t  = $tid ? get_term( (int) $tid, self::TAX ) : null;
+		$is = $t && ! is_wp_error( $t ) && ( 'corporate' === strtolower( $t->name ) || 'corporate' === $t->slug );
+		return (bool) apply_filters( 'smc_location_is_corporate', $is, $t );
+	}
+
+	/**
+	 * Location to show team and reviews for, or 0 for every location.
+	 * 0 on Corporate pages, pages with no location, and with location="all" or location="corporate".
+	 */
+	public static function listing_location_id( $location = '' ) {
+		$location = strtolower( trim( (string) $location ) );
+		if ( 'all' === $location ) {
+			return 0;
+		}
+		$tid = '' !== $location ? (int) ( get_term_by( 'slug', sanitize_title( $location ), self::TAX )->term_id ?? 0 ) : self::current_location_id();
+		return $tid && ! self::is_corporate( $tid ) ? $tid : 0;
+	}
+
+	/** Names of a post's locations, without Corporate. With $link, each links to the location's main page. */
+	public static function location_names( $post_id, $link = false ) {
+		$terms = wp_get_post_terms( $post_id, self::TAX );
+		$out   = [];
+		foreach ( is_wp_error( $terms ) ? [] : $terms as $t ) {
+			if ( self::is_corporate( $t->term_id ) ) {
+				continue;
+			}
+			$page  = $link && class_exists( 'SMC_Location_Manager' ) ? SMC_Location_Manager::location_page( $t ) : null;
+			$out[] = $page && 'publish' === $page->post_status ? '<a href="' . esc_url( get_permalink( $page ) ) . '">' . esc_html( $t->name ) . '</a>' : esc_html( $t->name );
+		}
+		return implode( ', ', $out );
+	}
+
 	/** Location term ID for the page being viewed, or 0. */
 	public static function current_location_id() {
 		return self::term_id( [] );
