@@ -576,7 +576,7 @@ class SMC_Location_Manager {
 				<tr><th scope="row"><label for="city_state_zip">City, state and zip</label></th>
 					<td><input name="city_state_zip" id="city_state_zip" class="regular-text" value="<?php echo $v( 'city_state_zip', $addr[1] ?? '' ); ?>"><?php echo SMC_Location_Fields::help( 'city_state_zip' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="city_state">City and state</label></th>
-					<td><input name="city_state" id="city_state" class="regular-text" value="<?php echo $v( 'city_state', $m( 'city_state' ) ); ?>" placeholder="Kenton, OH"><?php echo SMC_Location_Fields::help( 'city_state' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+					<td><input name="city_state" id="city_state" class="regular-text" value="<?php echo $v( 'city_state', $m( 'city_state' ) ); ?>" placeholder="Springfield, ST"><?php echo SMC_Location_Fields::help( 'city_state' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="phone">Phone</label></th>
 					<td><input name="phone" id="phone" class="regular-text" value="<?php echo $v( 'phone', $m( 'phone_label' ) ); ?>">
 					<p class="description">The tap-to-call link is updated to match.</p><?php echo SMC_Location_Fields::help( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>

@@ -407,8 +407,8 @@ class SMC_Location_Reviews_Import {
 				</table>
 				<p>The first row must be column names. Only <code>review</code> is required; columns can be in any order:</p>
 				<pre style="background:#fff;border:1px solid #dcdcde;padding:10px 14px;max-width:900px;overflow:auto">name,rating,review,date,source,location
-Jane D.,5,"Everyone was so friendly and my cleaning was painless.",2026-08-14,Google,kenton
-Mark R.,5,"Best dental office in town.",2026-07-02,Facebook,kenton|columbus</pre>
+Jane D.,5,"Everyone was so friendly and my cleaning was painless.",2026-08-14,Google,springfield
+Mark R.,5,"Best dental office in town.",2026-07-02,Facebook,springfield|shelbyville</pre>
 				<p class="description"><code>location</code> is the location's name or slug; separate several with <code>|</code>. <code>rating</code> is 1 to 5 (default 5). <code>source</code> is Google, Facebook, Yelp, Healthgrades, Zocdoc, Website or Other. A <code>link</code> column with the review's URL is optional.</p>
 				<?php submit_button( 'Import CSV' ); ?>
 			</form>

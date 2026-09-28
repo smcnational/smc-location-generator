@@ -23,8 +23,8 @@ class SMC_Location_Core {
 
 	/** SMC's standard base fields, with the field keys existing sites use. */
 	const BASE_FIELDS = [
-		'city_state'      => [ 'field_64d395506a948', 'City and state', 'text', 'e.g. Kenton, OH' ],
-		'address'         => [ 'field_64d395776a949', 'Address', 'text', 'Street, then <br>, then city, state and zip. e.g. 965 E Columbus St<br>Kenton, OH 43326' ],
+		'city_state'      => [ 'field_64d395506a948', 'City and state', 'text', 'e.g. Springfield, ST' ],
+		'address'         => [ 'field_64d395776a949', 'Address', 'text', 'Street, then <br>, then city, state and zip. e.g. 123 Main St<br>Springfield, ST 12345' ],
 		'phone_label'     => [ 'field_64d395936a94a', 'Phone', 'text', 'As it should appear, e.g. 419-848-0722' ],
 		'phone_link'      => [ 'field_64d395ea6a94b', 'Phone link', 'text', 'e.g. tel:419-848-0722 (the Edit screen under Locations fills this in from the phone automatically)' ],
 		'booking_label'   => [ 'field_64d3964b53614', 'Booking button text', 'text', 'e.g. Book Appointment' ],

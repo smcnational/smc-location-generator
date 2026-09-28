@@ -134,7 +134,7 @@ class SMC_Location_Team {
 						'name'         => 'anchor',
 						'type'         => 'text',
 						'prepend'      => '#',
-						'instructions' => 'Link straight to this profile by adding this to the page URL, e.g. /kenton/meet-the-doctors/#dr-jane-lee. Leave blank to use the name.',
+						'instructions' => 'Link straight to this profile by adding this to the page URL, e.g. /springfield/meet-the-doctors/#dr-jane-lee. Leave blank to use the name.',
 					],
 				],
 				'location' => [ [ [ 'param' => 'post_type', 'operator' => '==', 'value' => self::TYPE ] ] ],

@@ -221,7 +221,7 @@ class SMC_Location_Admin {
 					<td>
 						<select name="source" id="source" required>
 							<?php foreach ( $sources as $src ) : ?>
-								<option value="<?php echo esc_attr( $src['slug'] ); ?>" data-current="<?php echo esc_attr( wp_json_encode( $src['current'] ) ); ?>" <?php selected( $v['source'] ?? '', $src['slug'] ); ?>>
+								<option value="<?php echo esc_attr( $src['slug'] ); ?>" data-current="<?php echo esc_attr( wp_json_encode( $src['current'] ) ); ?>" data-name="<?php echo esc_attr( $src['name'] ); ?>" <?php selected( $v['source'] ?? '', $src['slug'] ); ?>>
 									<?php echo esc_html( "{$src['name']}  ({$src['pages']} pages, {$src['phone']})" ); ?>
 								</option>
 							<?php endforeach; ?>
@@ -234,16 +234,16 @@ class SMC_Location_Admin {
 			<h2>New location</h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="city">City</label></th>
-					<td><input name="city" id="city" class="regular-text" required value="<?php echo $val( 'city' ); ?>" placeholder="Marion"></td></tr>
+					<td><input name="city" id="city" class="regular-text" required value="<?php echo $val( 'city' ); ?>" placeholder="Springfield"></td></tr>
 				<tr><th scope="row"><label for="state">State</label></th>
-					<td><input name="state" id="state" class="small-text" maxlength="2" value="<?php echo $val( 'state' ); ?>" placeholder="OH">
+					<td><input name="state" id="state" class="small-text smc-copyable" data-field="state" maxlength="2" value="<?php echo $val( 'state' ); ?>" placeholder="ST">
 					<p class="description">Leave blank to use the same state as the location you're copying.</p></td></tr>
 				<tr><th scope="row"><label for="phone">Phone</label></th>
-					<td><input name="phone" id="phone" class="regular-text" required value="<?php echo $val( 'phone' ); ?>" placeholder="740-555-0199"></td></tr>
+					<td><input name="phone" id="phone" class="regular-text" required value="<?php echo $val( 'phone' ); ?>" placeholder="555-555-0100"></td></tr>
 				<tr><th scope="row"><label for="street">Street address</label></th>
-					<td><input name="street" id="street" class="regular-text" required value="<?php echo $val( 'street' ); ?>" placeholder="1200 Main St"></td></tr>
+					<td><input name="street" id="street" class="regular-text" required value="<?php echo $val( 'street' ); ?>" placeholder="123 Main St"></td></tr>
 				<tr><th scope="row"><label for="city_state_zip">City, state and zip</label></th>
-					<td><input name="city_state_zip" id="city_state_zip" class="regular-text" required value="<?php echo $val( 'city_state_zip' ); ?>" placeholder="Marion, OH 43302"></td></tr>
+					<td><input name="city_state_zip" id="city_state_zip" class="regular-text" required value="<?php echo $val( 'city_state_zip' ); ?>" placeholder="Springfield, ST 12345"></td></tr>
 				<tr><th scope="row"><label for="booking_link">Booking form link</label></th>
 					<td><input name="booking_link" id="booking_link" type="url" class="large-text" value="<?php echo $val( 'booking_link' ); ?>" placeholder="https://form.jotform.com/...">
 					<p class="description">The new office's JotForm. Leave blank to keep the copied location's form for now.</p></td></tr>
@@ -289,10 +289,10 @@ class SMC_Location_Admin {
 				<summary>More options</summary>
 				<table class="form-table" role="presentation">
 					<tr><th scope="row"><label for="replace">Extra replacements</label></th>
-						<td><textarea name="replace" id="replace" rows="5" class="large-text code" placeholder="Downtown Kenton => Downtown Lima&#10;Hardin County => Allen County"><?php echo esc_textarea( $replace ); ?></textarea>
+						<td><textarea name="replace" id="replace" rows="5" class="large-text code" placeholder="Downtown Oldtown => Downtown Springfield"><?php echo esc_textarea( $replace ); ?></textarea>
 						<p class="description">One per line as <code>old =&gt; new</code>. For text typed into the copied pages that's specific to the location, like neighborhood names or a doctor mentioned in the page copy. Doctor and team profiles come from Locations &gt; Team and aren't copied.</p></td></tr>
 					<tr><th scope="row"><label for="slug">URL slug</label></th>
-						<td><input name="slug" id="slug" class="regular-text" value="<?php echo $val( 'slug' ); ?>" placeholder="marion">
+						<td><input name="slug" id="slug" class="regular-text" value="<?php echo $val( 'slug' ); ?>" placeholder="springfield">
 						<p class="description">Leave blank to use the city name.</p></td></tr>
 					<tr><th scope="row"><label for="status">New pages are</label></th>
 						<td><select name="status" id="status">
@@ -313,15 +313,25 @@ class SMC_Location_Admin {
 		</form>
 		<script>
 		( function () {
-			var sel = document.getElementById( 'source' );
+			var sel = document.getElementById( 'source' ), city = document.getElementById( 'city' ),
+				replace = document.getElementById( 'replace' ), slug = document.getElementById( 'slug' );
 			function fill() {
 				var opt = sel.options[ sel.selectedIndex ], cur = {};
 				try { cur = JSON.parse( opt.getAttribute( 'data-current' ) || '{}' ); } catch ( e ) {}
 				document.querySelectorAll( '.smc-copyable' ).forEach( function ( el ) {
-					el.placeholder = cur[ el.getAttribute( 'data-field' ) ] || '';
+					el.placeholder = cur[ el.getAttribute( 'data-field' ) ] || ( 'state' === el.getAttribute( 'data-field' ) ? 'ST' : '' );
 				} );
+				names();
+			}
+			// Example replacement and slug follow the copied location and the new city.
+			function names() {
+				var from = sel.options[ sel.selectedIndex ].getAttribute( 'data-name' ) || 'Oldtown',
+					to = city.value.trim() || 'Springfield';
+				if ( replace ) { replace.placeholder = 'Downtown ' + from + ' => Downtown ' + to; }
+				if ( slug ) { slug.placeholder = to.toLowerCase().replace( /[^a-z0-9]+/g, '-' ).replace( /^-|-$/g, '' ); }
 			}
 			sel.addEventListener( 'change', fill );
+			city.addEventListener( 'input', names );
 			fill();
 		} )();
 		</script>
@@ -506,6 +516,7 @@ class SMC_Location_Admin {
 					$current[ $name ] = (string) get_term_meta( $t->term_id, $name, true );
 				}
 			}
+			$current['state'] = preg_match( '/,\s*([A-Z]{2})\b/', (string) get_term_meta( $t->term_id, 'city_state', true ), $sm ) ? $sm[1] : '';
 			$out[] = [
 				'current' => $current,
 				'slug'  => $t->slug,
