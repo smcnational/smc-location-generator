@@ -198,10 +198,21 @@ class SMC_Location_Manager {
 			$values[ $k ] = esc_url_raw( trim( (string) ( $p['social'][ $k ] ?? '' ) ) );
 		}
 
-		if ( $name !== $term->name ) {
-			$res = wp_update_term( $tid, self::TAX, [ 'name' => $name ] );
+		$slug = sanitize_title( $txt( 'slug' ) );
+		if ( '' === $slug ) {
+			$slug = $term->slug;
+		}
+		if ( $slug !== $term->slug ) {
+			$other = get_term_by( 'slug', $slug, self::TAX );
+			if ( $other && (int) $other->term_id !== (int) $tid ) {
+				return "The slug \"$slug\" is already used by the {$other->name} location.";
+			}
+		}
+
+		if ( $name !== $term->name || $slug !== $term->slug ) {
+			$res = wp_update_term( $tid, self::TAX, [ 'name' => $name, 'slug' => $slug ] );
 			if ( is_wp_error( $res ) ) {
-				return 'Could not rename the location: ' . $res->get_error_message();
+				return 'Could not update the location: ' . $res->get_error_message();
 			}
 		}
 		foreach ( $values as $k => $v ) {
@@ -504,6 +515,9 @@ class SMC_Location_Manager {
 				<tr><th scope="row"><label for="name">Name</label></th>
 					<td><input name="name" id="name" class="regular-text" required value="<?php echo $v( 'name', $term->name ); ?>">
 					<p class="description">Renaming doesn't change page URLs or page content.</p><?php echo SMC_Location_Fields::help( 'name' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+				<tr><th scope="row"><label for="slug">Slug</label></th>
+					<td><input name="slug" id="slug" class="regular-text code" value="<?php echo $v( 'slug', $term->slug ); ?>">
+					<p class="description">The location's short name, used in <code>location="<?php echo esc_html( $term->slug ); ?>"</code> on shortcodes and to match locations when importing. Lowercase letters, numbers and hyphens. Changing it doesn't change page URLs; any shortcode already using <code>location="<?php echo esc_html( $term->slug ); ?>"</code> would need updating.</p></td></tr>
 				<tr><th scope="row"><label for="street">Street address</label></th>
 					<td><input name="street" id="street" class="regular-text" value="<?php echo $v( 'street', $addr[0] ?? '' ); ?>"><?php echo SMC_Location_Fields::help( 'street' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="city_state_zip">City, state and zip</label></th>
@@ -531,7 +545,7 @@ class SMC_Location_Manager {
 					<td><input name="booking_classes" id="booking_classes" class="regular-text code" value="<?php echo $v( 'booking_classes', $m( 'booking_classes' ) ); ?>">
 					<p class="description">Usually <code>jotformButton</code>, which opens the JotForm popup.</p><?php echo SMC_Location_Fields::help( 'booking_classes' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 				<tr><th scope="row"><label for="form_embed">Embedded form</label></th>
-					<td><textarea name="form_embed" id="form_embed" rows="2" class="large-text code" placeholder="<?php echo esc_attr( $m( 'booking_link' ) ? 'Blank: embeds the booking form above' : 'https://form.jotform.com/...' ); ?>"><?php echo esc_textarea( null !== $post ? ( $post['form_embed'] ?? '' ) : SMC_Location_Fields::form_url( $m( 'form_embed' ) ) ); ?></textarea>
+					<td><textarea name="form_embed" id="form_embed" rows="3" class="large-text code" placeholder="<?php echo esc_attr( $m( 'booking_link' ) ? 'Blank: embeds the booking form above' : 'https://form.jotform.com/...' ); ?>"><?php echo esc_textarea( null !== $post ? ( $post['form_embed'] ?? '' ) : SMC_Location_Fields::form_url( $m( 'form_embed' ) ) ); ?></textarea>
 					<p class="description">The form for contact pages and popups. Paste the JotForm link, form ID, or embed code. Leave blank to embed the booking form.</p><?php echo SMC_Location_Fields::help( 'form_embed' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
 			</table>
 

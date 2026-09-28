@@ -254,7 +254,7 @@ class SMC_Location_Admin {
 					<td><input name="email_label" id="email_label" class="regular-text smc-copyable" data-field="email_label" value="<?php echo $val( 'email_label' ); ?>">
 					<p class="description">Leave blank to keep the copied location's text (shown in grey). If that's blank too, the site default is used.</p></td></tr>
 				<tr><th scope="row"><label for="form">Embedded form</label></th>
-					<td><input name="form" id="form" class="large-text smc-copyable" data-field="form_embed" value="<?php echo $val( 'form' ); ?>">
+					<td><textarea name="form" id="form" rows="3" class="large-text code smc-copyable" data-field="form_embed"><?php echo esc_textarea( $v['form'] ?? '' ); ?></textarea>
 					<p class="description">The JotForm for <code>[location_form]</code>: link, form ID or embed code. Leave blank to keep the copied location's form (shown in grey), or the booking form if it has none.</p></td></tr>
 			</table>
 
