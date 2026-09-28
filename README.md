@@ -244,6 +244,12 @@ The list shows photos and can be filtered by location and by doctors or team. **
 
 The page stops 120px above the profile so a sticky header doesn't cover it; change that with `offset="90"` on `[location_team]` or `[team field="anchor"]`. The Menu Anchor widget ignores that offset, so for it add `.elementor-menu-anchor { scroll-margin-top: 120px; }` to Site Settings > Custom CSS.
 
+**Doctor buttons on the location homepage:** link each doctor straight to their profile on the location's Meet the Doctors page (`/springfield/meet-the-doctors/#dr-jane-lee`).
+- In a Loop Item (Query ID `location_doctors`), add a Button and set its **Link** to the **Shortcode** dynamic tag with `[team field="profile_url"]`. For a plain text link, use `[team field="profile_link" text="Read Bio"]` in a Shortcode widget.
+- Or without a Loop: `[location_team type="doctors" bio="none" button="Read Bio"]`. The button uses the site's Elementor button style.
+- The page is found automatically: the location's page whose slug has "doctors" (or "dentists", "providers") in it, preferring one with "meet". Team members link to the page with "team" or "staff". If it picks the wrong page, add `page="our-doctors"` (the page's slug).
+- On Corporate pages it uses Corporate's own doctors page if there is one, otherwise the doctor's first location's. If there's no doctors page at all, the button is hidden.
+
 **Corporate:** on Corporate pages (the main location on the homepage) everything shows every location's doctors and team, each person once even if they work at several offices. `[location_team]` adds the offices under each person's title there (`show_location="no"` to hide, `"yes"` to show it everywhere); in a Loop Item use `[team field="locations"]`, or `link="yes"` to link each office to its location page. Don't tick Corporate on team members or reviews; it isn't offered and isn't needed. A location counts as Corporate if its name or slug is `corporate`.
 
 Everything follows the page's location, so the Meet the Doctors and Meet the Team pages work for every location, including new clones. New locations start with no team; people are never copied from another location. Someone who works at two offices is added once, with both locations ticked. Deleting a location trashes the people who work only there. The team (with photos) is included in **Export / Import**, and **Scan** flags headings and profile boxes that still have a saved team member's name typed in.

@@ -78,8 +78,9 @@ class SMC_Location_Fields {
 	}
 
 	/**
-	 * Removes an Elementor Button whose link comes from a [location ...] shortcode that's
-	 * empty for this location, e.g. an "Email Us" button at a location with no email.
+	 * Removes an Elementor Button whose link comes from a [location ...] or [team ...] shortcode
+	 * that's empty here, e.g. an "Email Us" button at a location with no email, or a "Read Bio"
+	 * button when the location has no Meet the Doctors page.
 	 * In the Elementor editor the button is dimmed instead.
 	 */
 	public static function hide_empty_button( $content, $widget ) {
@@ -90,7 +91,7 @@ class SMC_Location_Fields {
 			return $content;
 		}
 		$dynamic = (array) $widget->get_settings( '__dynamic__' );
-		if ( empty( $dynamic['link'] ) || false === stripos( rawurldecode( (string) $dynamic['link'] ), '[location' ) ) {
+		if ( empty( $dynamic['link'] ) || ! preg_match( '/\[(location|team)\b/i', rawurldecode( (string) $dynamic['link'] ) ) ) {
 			return $content;
 		}
 		if ( preg_match( '/<a\b[^>]*\shref\s*=\s*(["\'])(.*?)\1/is', $content, $h ) && ! in_array( strtolower( trim( $h[2] ) ), [ '', '#', 'mailto:', 'tel:' ], true ) ) {

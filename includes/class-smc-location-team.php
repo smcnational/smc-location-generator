@@ -363,6 +363,8 @@ class SMC_Location_Team {
 				'shape'    => 'square',
 				'offset'   => '',
 				'show_location' => 'auto',
+				'button'   => '',
+				'page'     => '',
 			],
 			$atts,
 			'location_team'
@@ -413,6 +415,10 @@ class SMC_Location_Team {
 				$bio  = 'full' === $a['bio'] ? apply_filters( 'the_content', $p->post_content ) : wpautop( esc_html( wp_trim_words( wp_strip_all_tags( $p->post_content ), max( 5, (int) $a['words'] ) ) ) );
 				$out .= '<div class="smc-team-bio">' . $bio . '</div>';
 			}
+			$url = '' !== trim( $a['button'] ) ? self::profile_url( $p->ID, $a['page'] ) : '';
+			if ( '' !== $url ) {
+				$out .= '<div class="smc-team-button-wrap"><a class="elementor-button smc-team-button" href="' . esc_url( $url ) . '">' . esc_html( $a['button'] ) . '</a></div>';
+			}
 			$out .= '</div>';
 		}
 		return $out . '</div>';
@@ -422,6 +428,74 @@ class SMC_Location_Team {
 	public static function anchor( $post_id ) {
 		$set = sanitize_title( (string) get_post_meta( $post_id, 'anchor', true ) );
 		return '' !== $set ? $set : sanitize_title( get_the_title( $post_id ) );
+	}
+
+	/**
+	 * Link to a person's profile on the location's Meet the Doctors (or Meet the Team) page,
+	 * e.g. /springfield/meet-the-doctors/#dr-jane-lee. Uses the page's location; on Corporate
+	 * pages, Corporate's own doctors page if it has one, otherwise the person's first location.
+	 * $page: the page's slug, if detection picks the wrong one. '' when there's no such page.
+	 */
+	public static function profile_url( $post_id, $page = '' ) {
+		$kind = 'doctor' === get_post_meta( $post_id, 'team_type', true ) ? 'doctor' : 'team';
+		$tids = [];
+		$here = SMC_Location_Fields::current_location_id();
+		if ( $here ) {
+			$tids[] = $here;
+		}
+		$mine = wp_get_object_terms( $post_id, self::TAX, [ 'fields' => 'ids' ] );
+		if ( ! is_wp_error( $mine ) ) {
+			// Off a location's own pages (Corporate, blog...), fall back to where the person works.
+			if ( ! $here || SMC_Location_Fields::is_corporate( $here ) || ! in_array( (int) $here, array_map( 'intval', $mine ), true ) ) {
+				$tids = array_merge( $tids, array_map( 'intval', $mine ) );
+			}
+		}
+		foreach ( array_unique( $tids ) as $tid ) {
+			$p = self::profiles_page( $tid, $kind, $page );
+			if ( $p ) {
+				$url = (string) apply_filters( 'smc_team_profile_url', get_permalink( $p ), $post_id, $p );
+				return '' !== $url ? $url . '#' . self::anchor( $post_id ) : '';
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * A location's Meet the Doctors or Meet the Team page: its page whose slug has "doctor"
+	 * (or "dentist", "provider") for doctors, or "team" (or "staff") for team members,
+	 * preferring slugs with "meet" in them. $slug picks the page by slug instead.
+	 */
+	public static function profiles_page( $tid, $kind = 'doctor', $slug = '' ) {
+		static $cache = [];
+		$key = "$tid|$kind|$slug";
+		if ( array_key_exists( $key, $cache ) ) {
+			return $cache[ $key ];
+		}
+		$pages = get_posts(
+			[
+				'post_type'   => 'page',
+				'post_status' => current_user_can( 'edit_pages' ) ? [ 'publish', 'draft', 'pending', 'private' ] : 'publish',
+				'numberposts' => -1,
+				'tax_query'   => [ [ 'taxonomy' => self::TAX, 'terms' => (int) $tid ] ], // phpcs:ignore WordPress.DB.SlowDBQuery
+			]
+		);
+		$slug  = sanitize_title( $slug );
+		$words = 'doctor' === $kind ? '/(^|-)(doctors?|dentists?|providers?|orthodontists?)(-|$)/' : '/(^|-)(team|staff)(-|$)/';
+		$best  = null;
+		$score = 0;
+		foreach ( $pages as $p ) {
+			if ( '' !== $slug ) {
+				$s = $slug === $p->post_name ? 10 : 0;
+			} else {
+				$s = preg_match( $words, $p->post_name ) ? 2 + ( false !== strpos( $p->post_name, 'meet' ) ? 2 : 0 ) + ( 'publish' === $p->post_status ? 1 : 0 ) : 0;
+			}
+			if ( $s > $score ) {
+				$best  = $p;
+				$score = $s;
+			}
+		}
+		$cache[ $key ] = apply_filters( 'smc_team_profiles_page', $best, $tid, $kind );
+		return $cache[ $key ];
 	}
 
 	/** Shows the automatic anchor as the field's placeholder. */
@@ -443,10 +517,12 @@ class SMC_Location_Team {
 	/**
 	 * [team field="..."] - one part of the current team member, for Elementor Loop Items.
 	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten), photo, photo_url,
-	 *   locations (the offices they work at; link="yes" links each to its location page)
+	 *   locations (the offices they work at; link="yes" links each to its location page),
+	 *   profile_url (their profile on Meet the Doctors / Meet the Team, for a button's link),
+	 *   profile_link (the same as a text link; text="Read Bio")
 	 */
 	public static function field_shortcode( $atts ) {
-		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large', 'offset' => '', 'link' => '' ], $atts, 'team' );
+		$a  = shortcode_atts( [ 'field' => 'name', 'words' => 0, 'size' => 'medium_large', 'offset' => '', 'link' => '', 'text' => 'Read Bio', 'page' => '' ], $atts, 'team' );
 		$id = get_the_ID();
 		if ( ! $id || self::TYPE !== get_post_type( $id ) ) {
 			return '';
@@ -462,6 +538,12 @@ class SMC_Location_Team {
 				return self::css() . '<span class="smc-team-anchor" id="' . esc_attr( self::anchor( $id ) ) . '"' . $style . '></span>';
 			case 'anchor_id':
 				return esc_attr( self::anchor( $id ) );
+			case 'profile_url':
+			case 'bio_url':
+				return esc_url( self::profile_url( $id, $a['page'] ) );
+			case 'profile_link':
+				$url = self::profile_url( $id, $a['page'] );
+				return '' !== $url ? '<a class="smc-team-link" href="' . esc_url( $url ) . '">' . esc_html( $a['text'] ) . '</a>' : '';
 			case 'title':
 				return esc_html( (string) get_post_meta( $id, 'job_title', true ) );
 			case 'locations':
@@ -496,6 +578,7 @@ class SMC_Location_Team {
 			. '.smc-team-name{font-weight:700;margin-top:14px;font-size:1.15em}'
 			. '.smc-team-title{opacity:.8;margin-top:2px}'
 			. '.smc-team-locations{font-size:.9em;opacity:.8;margin-top:2px}'
+			. '.smc-team-button-wrap{margin-top:14px}'
 			. '.smc-team-bio{margin-top:10px}.smc-team-bio p:last-child{margin-bottom:0}'
 			. '.smc-team-member,.smc-team-anchor{scroll-margin-top:var(--smc-anchor-offset,120px)}'
 			. '.smc-team-anchor{display:block;height:0;overflow:hidden}'
