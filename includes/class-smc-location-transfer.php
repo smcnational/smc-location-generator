@@ -80,6 +80,7 @@ class SMC_Location_Transfer {
 				$rows[] = [
 					'name'        => $p->post_title,
 					'bio'         => $p->post_content,
+					'short_bio'   => (string) get_post_meta( $p->ID, 'short_bio', true ),
 					'type'        => (string) get_post_meta( $p->ID, 'team_type', true ),
 					'title'       => (string) get_post_meta( $p->ID, 'job_title', true ),
 					'credentials' => (string) get_post_meta( $p->ID, 'credentials', true ),

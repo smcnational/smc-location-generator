@@ -136,6 +136,15 @@ class SMC_Location_Team {
 						'prepend'      => '#',
 						'instructions' => 'Link straight to this profile by adding this to the page URL, e.g. /springfield/meet-the-doctors/#dr-jane-lee. Leave blank to use the name.',
 					],
+					[
+						'key'          => 'field_smc_team_short_bio',
+						'label'        => 'Short bio',
+						'name'         => 'short_bio',
+						'type'         => 'textarea',
+						'rows'         => 4,
+						'new_lines'    => '',
+						'instructions' => 'A shorter bio for the location homepage and other doctor cards. The full bio below is for the Meet the Doctors page. Leave blank to use the start of the full bio.',
+					],
 				],
 				'location' => [ [ [ 'param' => 'post_type', 'operator' => '==', 'value' => self::TYPE ] ] ],
 				'position' => 'acf_after_title',
@@ -188,6 +197,7 @@ class SMC_Location_Team {
 		foreach ( [ 'job_title' => 'Job title', 'credentials' => 'Credentials', 'anchor' => 'Menu anchor (leave blank to use the name)' ] as $k => $label ) {
 			printf( '<p><label>%s<br><input name="smc_team[%s]" class="regular-text" value="%s"></label></p>', esc_html( $label ), esc_attr( $k ), esc_attr( get_post_meta( $post->ID, $k, true ) ) );
 		}
+		printf( '<p><label>Short bio (for the location homepage; leave blank to use the start of the full bio)<br><textarea name="smc_team[short_bio]" rows="4" class="large-text">%s</textarea></label></p>', esc_textarea( get_post_meta( $post->ID, 'short_bio', true ) ) );
 	}
 
 	public static function save_box( $post_id ) {
@@ -204,6 +214,7 @@ class SMC_Location_Team {
 			update_post_meta( $post_id, 'job_title', sanitize_text_field( $in['job_title'] ?? '' ) );
 			update_post_meta( $post_id, 'credentials', sanitize_text_field( $in['credentials'] ?? '' ) );
 			update_post_meta( $post_id, 'anchor', sanitize_title( $in['anchor'] ?? '' ) );
+			update_post_meta( $post_id, 'short_bio', sanitize_textarea_field( $in['short_bio'] ?? '' ) );
 		}
 	}
 
@@ -411,9 +422,11 @@ class SMC_Location_Team {
 			if ( '' !== $locs ) {
 				$out .= '<div class="smc-team-locations">' . $locs . '</div>';
 			}
-			if ( 'none' !== $a['bio'] && '' !== trim( $p->post_content ) ) {
-				$bio  = 'full' === $a['bio'] ? apply_filters( 'the_content', $p->post_content ) : wpautop( esc_html( wp_trim_words( wp_strip_all_tags( $p->post_content ), max( 5, (int) $a['words'] ) ) ) );
-				$out .= '<div class="smc-team-bio">' . $bio . '</div>';
+			if ( 'none' !== $a['bio'] ) {
+				$bio = 'full' === $a['bio'] ? ( '' !== trim( $p->post_content ) ? apply_filters( 'the_content', $p->post_content ) : '' ) : self::short_bio( $p->ID, max( 5, (int) $a['words'] ) );
+				if ( '' !== $bio ) {
+					$out .= '<div class="smc-team-bio">' . $bio . '</div>';
+				}
 			}
 			$url = '' !== trim( $a['button'] ) ? self::profile_url( $p->ID, $a['page'] ) : '';
 			if ( '' !== $url ) {
@@ -422,6 +435,16 @@ class SMC_Location_Team {
 			$out .= '</div>';
 		}
 		return $out . '</div>';
+	}
+
+	/** The Short bio field as paragraphs, or the start of the full bio ($words words) if it's blank. */
+	public static function short_bio( $post_id, $words = 40 ) {
+		$short = trim( (string) get_post_meta( $post_id, 'short_bio', true ) );
+		if ( '' !== $short ) {
+			return wpautop( esc_html( $short ) );
+		}
+		$full = trim( wp_strip_all_tags( get_post_field( 'post_content', $post_id ) ) );
+		return '' !== $full ? wpautop( esc_html( wp_trim_words( $full, max( 5, (int) $words ) ) ) ) : '';
 	}
 
 	/** The profile's menu anchor: the Menu anchor field, or the name as a slug ("dr-jane-lee"). */
@@ -516,7 +539,8 @@ class SMC_Location_Team {
 
 	/**
 	 * [team field="..."] - one part of the current team member, for Elementor Loop Items.
-	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten), photo, photo_url,
+	 *   name, name_credentials, credentials, title, type, bio (words="40" to shorten),
+	 *   short_bio (the Short bio field, or the start of the full bio; words="40"), photo, photo_url,
 	 *   locations (the offices they work at; link="yes" links each to its location page),
 	 *   profile_url (their profile on Meet the Doctors / Meet the Team, for a button's link),
 	 *   profile_link (the same as a text link; text="Read Bio")
@@ -555,6 +579,8 @@ class SMC_Location_Team {
 				return get_the_post_thumbnail( $id, sanitize_key( $a['size'] ) ?: 'medium_large' );
 			case 'photo_url':
 				return esc_url( (string) get_the_post_thumbnail_url( $id, sanitize_key( $a['size'] ) ?: 'medium_large' ) );
+			case 'short_bio':
+				return self::short_bio( $id, (int) $a['words'] > 0 ? (int) $a['words'] : 40 );
 			case 'bio':
 				$text = wp_strip_all_tags( get_post_field( 'post_content', $id ) );
 				return (int) $a['words'] > 0 ? esc_html( wp_trim_words( $text, (int) $a['words'] ) ) : wpautop( esc_html( $text ) );
@@ -622,6 +648,8 @@ class SMC_Location_Team {
 					'_credentials' => 'field_smc_team_credentials',
 					'anchor'       => sanitize_title( $m['anchor'] ?? '' ),
 					'_anchor'      => 'field_smc_team_anchor',
+					'short_bio'    => sanitize_textarea_field( $m['short_bio'] ?? '' ),
+					'_short_bio'   => 'field_smc_team_short_bio',
 				],
 			],
 			true

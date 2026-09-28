@@ -244,6 +244,8 @@ The list shows photos and can be filtered by location and by doctors or team. **
 
 The page stops 120px above the profile so a sticky header doesn't cover it; change that with `offset="90"` on `[location_team]` or `[team field="anchor"]`. The Menu Anchor widget ignores that offset, so for it add `.elementor-menu-anchor { scroll-margin-top: 120px; }` to Site Settings > Custom CSS.
 
+**Short bio:** each person has a **Short bio** for the location homepage and other doctor cards, separate from the full bio on Meet the Doctors. Use `[team field="short_bio"]` in a Loop Item (or the ACF field `short_bio`). `[location_team]` uses it by default (`bio="short"`); `bio="full"` shows the full bio. If Short bio is blank, the first 40 words of the full bio are used (`words="30"` to change that). It's included in Export / Import.
+
 **Doctor buttons on the location homepage:** link each doctor straight to their profile on the location's Meet the Doctors page (`/springfield/meet-the-doctors/#dr-jane-lee`).
 - In a Loop Item (Query ID `location_doctors`), add a Button and set its **Link** to the **Shortcode** dynamic tag with `[team field="profile_url"]`. For a plain text link, use `[team field="profile_link" text="Read Bio"]` in a Shortcode widget.
 - Or without a Loop: `[location_team type="doctors" bio="none" button="Read Bio"]`. The button uses the site's Elementor button style.
