@@ -289,8 +289,8 @@ class SMC_Location_Admin {
 				<summary>More options</summary>
 				<table class="form-table" role="presentation">
 					<tr><th scope="row"><label for="replace">Extra replacements</label></th>
-						<td><textarea name="replace" id="replace" rows="5" class="large-text code" placeholder="Dr. Herman Deol => Dr. Jane Lee&#10;Dr. Deol => Dr. Lee"><?php echo esc_textarea( $replace ); ?></textarea>
-						<p class="description">One per line as <code>old =&gt; new</code>. Use it for doctor names or anything else specific to the location.</p></td></tr>
+						<td><textarea name="replace" id="replace" rows="5" class="large-text code" placeholder="Downtown Kenton => Downtown Lima&#10;Hardin County => Allen County"><?php echo esc_textarea( $replace ); ?></textarea>
+						<p class="description">One per line as <code>old =&gt; new</code>. For text typed into the copied pages that's specific to the location, like neighborhood names or a doctor mentioned in the page copy. Doctor and team profiles come from Locations &gt; Team and aren't copied.</p></td></tr>
 					<tr><th scope="row"><label for="slug">URL slug</label></th>
 						<td><input name="slug" id="slug" class="regular-text" value="<?php echo $val( 'slug' ); ?>" placeholder="marion">
 						<p class="description">Leave blank to use the city name.</p></td></tr>

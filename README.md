@@ -271,7 +271,7 @@ Go to **Locations > Add Location**. Only administrators can see the Locations me
 1. **Copy from:** pick the existing location that's most similar to the new one.
 2. **New location:** enter the city, phone, street address, city/state/zip, and booking form link. The copied location's values are swapped out automatically.
 3. **Hours, social links and map:** each blank field shows the copied location's value in grey and keeps it. Paste the new office's Google Maps embed code. The copied location's map is never carried over.
-4. **More options** (optional): extra replacements such as doctor names (`Dr. Deol => Dr. Lee`), the URL slug, page status, pages to skip, and text that must never change.
+4. **More options** (optional): extra replacements for text typed into the copied pages, like neighborhood names or a doctor mentioned in the page copy (`Downtown Kenton => Downtown Lima`). Doctor and team profiles come from **Locations > Team** and aren't copied, the URL slug, page status, pages to skip, and text that must never change.
 5. **Preview.** The preview shows every page, template, menu, and location field that will be created, plus anything to check. Nothing is created yet.
 6. **Create location.** It takes up to a minute. When it's done you get links to the new pages and a to-do list of what to finish by hand.
 
@@ -331,7 +331,7 @@ You only enter the new office's details. The current values (Kenton's phone, str
 | `form` | copied | The JotForm for `[location_form]`: link, ID or embed code. Left out, the copied location's form is kept (with a warning), or the booking form is used if it has none |
 | `social` | copied | `facebook`, `instagram`, `youtube`, `tiktok`, `google`. Blank keeps the copied link; `"none"` removes it |
 | `map` | empty | Google Maps embed code or embed URL. Never copied from the source location |
-| `replace` | `{}` | Extra `"old": "new"` swaps, such as doctor names: `"Dr. Deol": "Dr. Lee"` |
+| `replace` | `{}` | Extra `"old": "new"` swaps for location-specific text typed into pages: `"Downtown Kenton": "Downtown Lima"` |
 | `slug` | city, slugified | URL slug for the new location |
 | `status` | `draft` | Status for new pages |
 | `exclude` | `["lp", "services/dentist-*"]` | Pages to skip, matched by slug or path under the location. Wildcards allowed. Setting this replaces the default list. |
