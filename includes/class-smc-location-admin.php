@@ -375,13 +375,13 @@ class SMC_Location_Admin {
 		?>
 		<h2>Finish by hand</h2>
 		<ul class="ul-disc">
-			<li>Swap the doctors and team, their photos, and any local landmark images.</li>
+			<li>Add the new office's doctors and team under Locations &gt; Team (pages using <code>[location_team]</code> or a Team Loop show them automatically), and swap any local landmark photos.</li>
 			<li>Add the location to the store locator on the Our Locations page.</li>
 			<li>Update any "X Locations" text, like the homepage title.</li>
 			<li>Set up the office's JotForm if the booking link still points to the copied location.</li>
 			<li>Add the Google Map on the location's edit screen if you didn't paste one, and check the hours and social links.</li>
 			<li>Write the location's nearby-city pages (these are skipped on purpose).</li>
-			<li>Add the new office's reviews under Locations &gt; Reviews. Reviews are never copied from another location.</li>
+			<li>Add the new office's reviews under Locations &gt; Reviews. Reviews and team members are never copied from another location.</li>
 			<li>Review the pages, then publish them.</li>
 		</ul>
 		<?php

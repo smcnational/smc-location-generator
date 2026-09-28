@@ -146,6 +146,8 @@ class SMC_Location_Transfer_Page {
 				<input type="hidden" name="smc_action" value="export">
 				<div class="smc-section"><label><input type="checkbox" name="sections[]" value="locations" checked> <strong>Locations</strong> (<?php echo (int) $locations; ?>)</label>
 					<p class="description">Names and every detail: address, phone, email, hours, social links, map, forms, booking button.</p></div>
+				<div class="smc-section"><label><input type="checkbox" name="sections[]" value="team" checked> <strong>Team</strong> (<?php echo (int) ( wp_count_posts( 'smc_team' )->publish ?? 0 ); ?>)</label>
+					<p class="description">Doctors and team members with their photos (the image files are included), bios and locations.</p></div>
 				<div class="smc-section"><label><input type="checkbox" name="sections[]" value="reviews" checked> <strong>Reviews</strong> (<?php echo (int) $reviews; ?>)</label>
 					<p class="description">With their ratings, dates, sources and locations.</p></div>
 				<div class="smc-section"><label><input type="checkbox" name="sections[]" value="brand" checked> <strong>Brand</strong></label>
@@ -205,6 +207,16 @@ class SMC_Location_Transfer_Page {
 								</p>
 							<?php endif; ?>
 						<?php endif; ?>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( isset( $p['team'] ) ) : ?>
+					<div class="smc-section">
+						<label><input type="checkbox" name="sections[]" value="team" checked> <strong>Team</strong></label>
+						<p class="description">
+							<?php echo $p['team']['new'] ? esc_html( 'New: ' . implode( ', ', $p['team']['new'] ) ) . '<br>' : ''; ?>
+							<?php echo $p['team']['existing'] ? esc_html( 'Already on this site (not duplicated; their locations are combined): ' . implode( ', ', $p['team']['existing'] ) ) : ''; ?>
+						</p>
 					</div>
 				<?php endif; ?>
 

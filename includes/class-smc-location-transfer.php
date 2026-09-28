@@ -21,7 +21,7 @@ class SMC_Location_Transfer {
 
 	const FORMAT   = 1;
 	const TAX      = 'location_category';
-	const SECTIONS = [ 'locations', 'reviews', 'brand', 'settings' ];
+	const SECTIONS = [ 'locations', 'team', 'reviews', 'brand', 'settings' ];
 
 	/* ========== Export ========== */
 
@@ -71,6 +71,24 @@ class SMC_Location_Transfer {
 				];
 			}
 			$out['sections']['reviews'] = $rows;
+		}
+
+		if ( in_array( 'team', $sections, true ) && post_type_exists( 'smc_team' ) ) {
+			$rows = [];
+			foreach ( get_posts( [ 'post_type' => 'smc_team', 'post_status' => 'publish', 'numberposts' => -1, 'orderby' => [ 'menu_order' => 'ASC', 'title' => 'ASC' ] ] ) as $p ) {
+				$slugs  = wp_get_object_terms( $p->ID, self::TAX, [ 'fields' => 'slugs' ] );
+				$rows[] = [
+					'name'        => $p->post_title,
+					'bio'         => $p->post_content,
+					'type'        => (string) get_post_meta( $p->ID, 'team_type', true ),
+					'title'       => (string) get_post_meta( $p->ID, 'job_title', true ),
+					'credentials' => (string) get_post_meta( $p->ID, 'credentials', true ),
+					'order'       => (int) $p->menu_order,
+					'photo'       => self::image_out( get_post_thumbnail_id( $p ) ),
+					'locations'   => is_wp_error( $slugs ) ? [] : $slugs,
+				];
+			}
+			$out['sections']['team'] = $rows;
 		}
 
 		if ( in_array( 'brand', $sections, true ) && class_exists( 'SMC_Location_Brand' ) && SMC_Location_Brand::kit_id() ) {
@@ -163,6 +181,20 @@ class SMC_Location_Transfer {
 				}
 			}
 			$out['reviews'] = [ 'new' => $new, 'existing' => $dup ];
+		}
+
+		if ( isset( $s['team'] ) ) {
+			$new = [];
+			$old = [];
+			foreach ( (array) $s['team'] as $m ) {
+				$exists = get_posts( [ 'post_type' => 'smc_team', 'post_status' => 'any', 'title' => (string) ( $m['name'] ?? '' ), 'fields' => 'ids', 'numberposts' => 1 ] );
+				if ( $exists ) {
+					$old[] = $m['name'];
+				} else {
+					$new[] = $m['name'];
+				}
+			}
+			$out['team'] = [ 'new' => $new, 'existing' => $old ];
 		}
 
 		if ( isset( $s['brand'] ) ) {
@@ -269,6 +301,35 @@ class SMC_Location_Transfer {
 			if ( $missing ) {
 				$warn[] = 'Some reviews belong to locations this site doesn\'t have (' . implode( ', ', array_keys( $missing ) ) . '). They were imported without those locations; import Locations too, or assign them under Reviews.';
 			}
+		}
+
+		if ( in_array( 'team', $sections, true ) && isset( $s['team'] ) && class_exists( 'SMC_Location_Team' ) ) {
+			$made = 0;
+			$have = 0;
+			foreach ( (array) $s['team'] as $m ) {
+				$ids = [];
+				foreach ( (array) ( $m['locations'] ?? [] ) as $slug ) {
+					$t = get_term_by( 'slug', $slug, self::TAX );
+					if ( $t ) {
+						$ids[] = (int) $t->term_id;
+					}
+				}
+				$photo = 0;
+				if ( ! empty( $m['photo'] ) ) {
+					$pid = self::image_in( $m['photo'] );
+					if ( is_wp_error( $pid ) ) {
+						$warn[] = "Photo for {$m['name']} not imported: " . $pid->get_error_message();
+					} else {
+						$photo = $pid;
+					}
+				}
+				$res = SMC_Location_Team::create( $m, $ids, $photo );
+				if ( is_wp_error( $res ) ) {
+					continue;
+				}
+				$res ? $made++ : $have++;
+			}
+			$done[] = "Team: $made added" . ( $have ? ", $have already here (their locations were combined)" : '' ) . '.';
 		}
 
 		if ( in_array( 'brand', $sections, true ) && isset( $s['brand'] ) ) {

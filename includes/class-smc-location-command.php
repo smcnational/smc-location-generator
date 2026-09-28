@@ -340,7 +340,7 @@ class SMC_Location_Command {
 	 * : Where to write it. Default smc-locations-<site>-<date>.json in the current folder.
 	 *
 	 * [--sections=<list>]
-	 * : Comma-separated: locations,reviews,brand,settings. Default all.
+	 * : Comma-separated: locations,team,reviews,brand,settings. Default all.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -356,7 +356,7 @@ class SMC_Location_Command {
 		}
 		$counts = [];
 		foreach ( $data['sections'] as $k => $v ) {
-			$counts[] = in_array( $k, [ 'locations', 'reviews' ], true ) ? count( $v ) . " $k" : $k;
+			$counts[] = in_array( $k, [ 'locations', 'team', 'reviews' ], true ) ? count( $v ) . " $k" : $k;
 		}
 		WP_CLI::success( "Exported " . implode( ', ', $counts ) . " to $file." );
 	}
@@ -370,7 +370,7 @@ class SMC_Location_Command {
 	 * : The export file.
 	 *
 	 * [--sections=<list>]
-	 * : Comma-separated: locations,reviews,brand,settings. Default everything in the file.
+	 * : Comma-separated: locations,team,reviews,brand,settings. Default everything in the file.
 	 *
 	 * [--keep-existing]
 	 * : Don't update locations this site already has; only add new ones.
@@ -397,6 +397,9 @@ class SMC_Location_Command {
 		WP_CLI::log( 'From ' . ( $data['name'] ?? '' ) . ' (' . ( $data['site'] ?? '' ) . '), exported ' . ( $data['exported'] ?? '' ) );
 		if ( in_array( 'locations', $sections, true ) && isset( $p['locations'] ) ) {
 			WP_CLI::log( 'Locations: new: ' . ( implode( ', ', $p['locations']['new'] ) ?: 'none' ) . '; existing (' . ( empty( $assoc['keep-existing'] ) ? 'will update' : 'kept as is' ) . '): ' . ( implode( ', ', $p['locations']['existing'] ) ?: 'none' ) );
+		}
+		if ( in_array( 'team', $sections, true ) && isset( $p['team'] ) ) {
+			WP_CLI::log( 'Team: new: ' . ( implode( ', ', $p['team']['new'] ) ?: 'none' ) . '; already here: ' . ( implode( ', ', $p['team']['existing'] ) ?: 'none' ) );
 		}
 		if ( in_array( 'reviews', $sections, true ) && isset( $p['reviews'] ) ) {
 			WP_CLI::log( "Reviews: {$p['reviews']['new']} new, {$p['reviews']['existing']} already here" );

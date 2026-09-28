@@ -232,7 +232,15 @@ class SMC_Location_Manager {
 	 * Theme Builder templates shown only for this location, and its menu.
 	 */
 	private function delete_plan( WP_Term $term ) {
-		$plan = [ 'pages' => [], 'templates' => [], 'menus' => [], 'terms' => [], 'reviews' => [], 'blocked' => '', 'shared' => [] ];
+		$plan = [ 'pages' => [], 'templates' => [], 'menus' => [], 'terms' => [], 'reviews' => [], 'team' => [], 'blocked' => '', 'shared' => [] ];
+
+		// Team members who work only at this location. People at other offices too are kept.
+		foreach ( get_posts( [ 'post_type' => SMC_Location_Team::TYPE, 'post_status' => 'any', 'numberposts' => -1, 'tax_query' => [ [ 'taxonomy' => self::TAX, 'terms' => $term->term_id ] ] ] ) as $m ) { // phpcs:ignore WordPress.DB.SlowDBQuery
+			$locs = wp_get_object_terms( $m->ID, self::TAX, [ 'fields' => 'ids' ] );
+			if ( ! is_wp_error( $locs ) && 1 === count( $locs ) ) {
+				$plan['team'][ $m->ID ] = SMC_Location_Team::name_with_credentials( $m->ID );
+			}
+		}
 
 		// Reviews that belong only to this location. Reviews shared with other locations are kept.
 		foreach ( get_posts( [ 'post_type' => SMC_Location_Reviews::TYPE, 'post_status' => 'any', 'numberposts' => -1, 'tax_query' => [ [ 'taxonomy' => self::TAX, 'terms' => $term->term_id ] ] ] ) as $r ) { // phpcs:ignore WordPress.DB.SlowDBQuery
@@ -303,7 +311,14 @@ class SMC_Location_Manager {
 		if ( $plan['blocked'] && in_array( 'pages', $what, true ) ) {
 			return $plan['blocked'];
 		}
-		$counts = [ 'pages' => 0, 'templates' => 0, 'menus' => 0, 'terms' => 0, 'reviews' => 0 ];
+		$counts = [ 'pages' => 0, 'templates' => 0, 'menus' => 0, 'terms' => 0, 'reviews' => 0, 'team' => 0 ];
+		if ( in_array( 'team', $what, true ) ) {
+			foreach ( array_keys( $plan['team'] ) as $id ) {
+				if ( wp_trash_post( $id ) ) {
+					$counts['team']++;
+				}
+			}
+		}
 		if ( in_array( 'reviews', $what, true ) ) {
 			foreach ( array_keys( $plan['reviews'] ) as $id ) {
 				if ( wp_trash_post( $id ) ) {
@@ -380,10 +395,11 @@ class SMC_Location_Manager {
 			echo '<div class="notice notice-success is-dismissible"><p>Location saved.</p></div>';
 		} elseif ( 'deleted' === $msg ) {
 			printf(
-				'<div class="notice notice-success is-dismissible"><p>Deleted %s: %d page(s), %d template(s) and %d review(s) moved to the Trash, %d menu(s) and %d category term(s) deleted.</p></div>',
+				'<div class="notice notice-success is-dismissible"><p>Deleted %s: %d page(s), %d template(s), %d team member(s) and %d review(s) moved to the Trash, %d menu(s) and %d category term(s) deleted.</p></div>',
 				esc_html( sanitize_text_field( rawurldecode( wp_unslash( $_GET['name'] ?? '' ) ) ) ),
 				absint( $_GET['pages'] ?? 0 ),
 				absint( $_GET['templates'] ?? 0 ),
+				absint( $_GET['team'] ?? 0 ),
 				absint( $_GET['reviews'] ?? 0 ),
 				absint( $_GET['menus'] ?? 0 ),
 				absint( $_GET['terms'] ?? 0 )
@@ -422,7 +438,7 @@ class SMC_Location_Manager {
 		?>
 		<table class="widefat striped smc-list">
 			<thead><tr>
-				<th>Location</th><th>Address</th><th>Phone &amp; email</th><th>Hours</th><th>Map</th><th>Social</th><th>Reviews</th><th>Pages</th><th>Added</th>
+				<th>Location</th><th>Address</th><th>Phone &amp; email</th><th>Hours</th><th>Map</th><th>Social</th><th>Team</th><th>Reviews</th><th>Pages</th><th>Added</th>
 			</tr></thead>
 			<tbody>
 			<?php
@@ -467,6 +483,8 @@ class SMC_Location_Manager {
 					<td><?php echo $days ? esc_html( "$days of 7 days" ) : '<span class="smc-missing">Not set</span>'; ?></td>
 					<td><?php echo $map ? 'Yes' : '<span class="smc-missing">Missing</span>'; ?></td>
 					<td><?php echo $social ? esc_html( "$social link" . ( 1 === $social ? '' : 's' ) ) : '&mdash;'; ?></td>
+					<?php $team = SMC_Location_Team::count( $tid ); ?>
+					<td><?php echo $team ? '<a href="' . esc_url( admin_url( 'edit.php?post_type=' . SMC_Location_Team::TYPE . '&smc_location=' . $tid ) ) . '">' . (int) $team . '</a>' : '<a class="smc-missing" href="' . esc_url( admin_url( 'post-new.php?post_type=' . SMC_Location_Team::TYPE . '&location=' . $tid ) ) . '">Add</a>'; ?></td>
 					<?php $reviews = SMC_Location_Reviews::count( $tid ); ?>
 					<td><?php echo $reviews ? '<a href="' . esc_url( admin_url( 'edit.php?post_type=' . SMC_Location_Reviews::TYPE . '&smc_location=' . $tid ) ) . '">' . (int) $reviews . '</a>' : '<a class="smc-missing" href="' . esc_url( admin_url( 'post-new.php?post_type=' . SMC_Location_Reviews::TYPE . '&location=' . $tid ) ) . '">Add</a>'; ?></td>
 					<td><?php echo $page ? '<code>/' . esc_html( get_page_uri( $page ) ) . '/</code> ' . (int) $count : '<span class="smc-missing">No page</span>'; ?></td>
@@ -502,7 +520,7 @@ class SMC_Location_Manager {
 		<p><a href="<?php echo esc_url( self::url() ); ?>">&larr; All locations</a></p>
 		<div class="notice notice-info inline smc-sc-box"><p>
 			Each field below shows the shortcode that displays it. Click a shortcode to copy it. Shortcodes show the details of the <em>page's</em> location, so the same shortcode works on every location's pages.
-			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
+			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="doctors"]</code> its doctors &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="team"]</code> its team &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
 		</p></div>
 
 		<form method="post">
@@ -636,6 +654,10 @@ class SMC_Location_Manager {
 			<?php if ( $plan['shared'] ) : ?>
 				<p class="description"><strong>Kept:</strong> these templates also show for other pages or locations, so remove this location from their conditions by hand: <?php echo esc_html( implode( ', ', $plan['shared'] ) ); ?>.</p>
 			<?php endif; ?>
+
+			<h2><label><input type="checkbox" name="what[]" value="team" checked> Team (<?php echo count( $plan['team'] ); ?>)</label></h2>
+			<p class="description">Team members and doctors who work only at this location. Moved to the Trash. People who also work at other offices stay.</p>
+			<?php echo $list( array_values( $plan['team'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 
 			<h2><label><input type="checkbox" name="what[]" value="reviews" checked> Reviews (<?php echo count( $plan['reviews'] ); ?>)</label></h2>
 			<p class="description">Reviews assigned only to this location. Moved to the Trash. Reviews shared with other locations stay and just stop showing here.</p>

@@ -30,6 +30,7 @@ Show them anywhere with shortcodes. They work in Elementor's Shortcode widget, i
 | `[location_social]` | List of social links |
 | `[location_url]` | Link to the location's main page (`/kenton/`), or the homepage on pages with no location. `path="services/"` links to a page under it. Use it for the Site Logo link or "Home" menu items |
 | `[location_form]` | The location's embedded JotForm (or its booking form) |
+| `[location_team]` | The location's doctors and team (see Team below) |
 | `[location_reviews]` | The location's reviews (see Reviews below) |
 | `[location_map]` | Google Map, at the height set in **Locations > Settings** |
 | `[location_map height="300"]` | One map at a different height (optional; overrides the setting for that map only) |
@@ -208,6 +209,22 @@ wp smc location import smc-locations-staging-2026-09-28.json --dry-run
 wp smc location import site.json --sections=brand --yes
 wp smc location import site.json --keep-existing          # only add new locations
 ```
+
+## Team
+
+**Locations > Team** holds every doctor and team member. Each person has:
+- A name, a photo (the **Photo** box on the right) and a bio.
+- **Shows as** Doctor or Team member, a job title, and credentials, which are shown after the name ("Jane Lee, DDS").
+- One or more locations, and an **Order** (under Page Attributes; lower numbers show first).
+
+The list shows photos and can be filtered by location and by doctors or team. **All Locations** shows each location's team count (or **Add**).
+
+**Showing the team**
+- `[location_team type="doctors"]` for the Meet the Doctors page, and `[location_team type="team"]` for Meet the Team. Leave `type` out to show everyone.
+- Options: `columns` (1 to 4, default 3), `bio="short|full|none"` (short is `words="40"`), `shape="circle"` for round photos, `limit`, and `location="kenton"` or `location="all"`.
+- For a fully designed layout, use a **Loop Grid** or **Loop Carousel** with **Query ID** `location_doctors`, `location_staff` or `location_team`. In the Loop Item, use dynamic tags (Featured Image for the photo, Post Title, Post Content, ACF fields `job_title` and `credentials`) or `[team field="..."]` with `name`, `name_credentials`, `title`, `credentials`, `type`, `bio` (`words="30"`), `photo` or `photo_url`.
+
+Everything follows the page's location, so the Meet the Doctors and Meet the Team pages work for every location, including new clones. New locations start with no team; people are never copied from another location. Someone who works at two offices is added once, with both locations ticked. Deleting a location trashes the people who work only there. The team (with photos) is included in **Export / Import**, and **Scan** flags headings and profile boxes that still have a saved team member's name typed in.
 
 ## Scan for typed-in details
 

@@ -21,6 +21,7 @@ class SMC_Location_Scanner {
 		'Booking link' => 'Link: [location field="booking_link"]',
 		'Email'        => 'Text: [location field="email"]. Link: [location field="email_link"]',
 		'Form'         => '[location_form]',
+		'Team'         => 'Add the person under Locations > Team, then use [location_team] or a Loop Grid with Query ID location_doctors / location_staff',
 		'Reviews'      => 'Import them (Locations > Import Reviews), then use [location_reviews] or a Loop Carousel with Query ID location_reviews',
 	];
 
@@ -73,6 +74,14 @@ class SMC_Location_Scanner {
 		if ( ! class_exists( 'SMC_Location_Manager' ) ) {
 			require_once __DIR__ . '/class-smc-location-manager.php';
 		}
+		if ( post_type_exists( 'smc_team' ) ) {
+			foreach ( get_posts( [ 'post_type' => 'smc_team', 'post_status' => 'publish', 'numberposts' => -1 ] ) as $m ) {
+				$name = trim( preg_replace( '/^(dr\.?|doctor)\s+/i', '', $m->post_title ) );
+				if ( strlen( $name ) >= 5 && false !== strpos( $name, ' ' ) ) {
+					$this->team_names[ $name ] = $m->post_title;
+				}
+			}
+		}
 		foreach ( SMC_Location_Manager::locations() as $t ) {
 			$tid = $t->term_id;
 
@@ -101,6 +110,9 @@ class SMC_Location_Scanner {
 			}
 		}
 	}
+
+	/** Names of saved team members, to spot profiles typed into widgets. */
+	private $team_names = [];
 
 	/* ========== Scanning ========== */
 
@@ -151,6 +163,14 @@ class SMC_Location_Scanner {
 				if ( 'google_maps' === $widget && ! empty( $settings['address'] ) && empty( $settings['__dynamic__']['address'] ) ) {
 					$this->add( $findings, 'Map', 'Elementor Google Maps widget: ' . $settings['address'], $widget );
 					unset( $settings['address'] );
+				}
+				if ( $this->team_names && in_array( $widget, [ 'heading', 'image-box', 'icon-box', 'call-to-action', 'flip-box', 'price-list' ], true ) ) {
+					$flat = wp_strip_all_tags( implode( ' ', array_filter( (array) $settings, 'is_string' ) ) );
+					foreach ( $this->team_names as $needle => $full ) {
+						if ( false !== stripos( $flat, $needle ) ) {
+							$this->add( $findings, 'Team', "Typed-in profile: $full", $widget );
+						}
+					}
 				}
 				if ( in_array( $widget, [ 'testimonial', 'testimonial-carousel', 'reviews' ], true ) ) {
 					// Count real reviews only; carousels of [elementor-template] slides aren't reviews.
