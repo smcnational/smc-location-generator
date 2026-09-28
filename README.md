@@ -78,6 +78,19 @@ The repository is public, so sites need no token or other setup. Two optional `w
 
 How to publish a release is in `RELEASING.md`.
 
+## The location system
+
+The plugin provides everything the location shortcodes and templates rely on, so a new site needs nothing besides the plugin (plus Elementor Pro for the templates):
+
+- **Location Categories** and **Page Types** (the taxonomies used by the Theme Builder conditions). Registered only if the site doesn't already have them, for example through CPT UI.
+- **`[location field="..."]` and `[current_slug]`**, with the same behavior as SMC's original WPCode snippet. `[location]` also accepts `location="slug"`.
+- **The base location fields** (city and state, address, phone, phone link, booking button text, link and classes), using the same ACF field keys existing SMC sites use, so saved details carry over. ACF is optional: without it, details are edited under **Locations > All Locations > Edit**.
+
+**Existing sites** keep working exactly as they are. **Locations > Settings > Location system** shows what each part comes from, and what can be cleaned up:
+1. **WPCode "Shortcodes" snippet:** deactivate it under **Code Snippets**. The plugin's shortcodes already take priority.
+2. **CPT UI taxonomies:** optional. Delete **location_category** and **page_type** under **CPT UI > Add/Edit Taxonomies**, and the plugin registers them instead. Deleting them in CPT UI removes only the definition; the categories, their details and page assignments stay.
+3. **ACF field group:** click **Use built-in fields**. The site's group is deactivated (not deleted), and the plugin's fields take over. If the group has extra fields the plugin doesn't know, the panel lists them so you can keep the group instead.
+
 ## Install
 
 **First install on a site:** upload `smc-location-generator.zip` under **Plugins > Add New > Upload Plugin** (download it from the latest release on GitHub), then activate it. From then on it updates itself (see Updates above).

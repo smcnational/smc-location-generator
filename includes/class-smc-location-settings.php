@@ -354,6 +354,7 @@ class SMC_Location_Settings {
 		<div class="wrap">
 			<h1>Location Settings</h1>
 			<?php settings_errors(); ?>
+			<?php SMC_Location_Core::render_status(); ?>
 			<form method="post" action="options.php">
 				<?php
 				settings_fields( self::GROUP );
