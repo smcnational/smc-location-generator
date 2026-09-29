@@ -346,6 +346,7 @@ Everything follows the page's location, so the Meet the Doctors and Meet the Tea
 **Locations > Scan** finds location details that are typed into Elementor templates and pages instead of coming from the shortcodes:
 - Phone numbers, including `tel:` links.
 - Street addresses.
+- The location's city and state typed in, like "Springfield, MA" or "Springfield, Massachusetts" (use `[location field="city_state"]`). Followed by a zip, it's reported as the address. Neighboring towns like "West Springfield, MA" and the city name on its own aren't flagged.
 - Hours.
 - Social profile links.
 - Google Maps, both embedded iframes and Elementor's Google Maps widget.

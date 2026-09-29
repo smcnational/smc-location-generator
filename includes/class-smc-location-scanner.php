@@ -24,12 +24,15 @@ class SMC_Location_Scanner {
 		'Form'         => '[location_form]',
 		'Team'         => 'Add the person under Locations > Team, then use [location_team] or a Loop Grid with Query ID location_doctors / location_staff',
 		'Reviews'      => 'Import them (Locations > Import Reviews), then use [location_reviews] or a Loop Carousel with Query ID location_reviews',
+		'City and state' => '[location field="city_state"] (or [location field="address"] if it\'s part of the full address)',
 		'Site name'    => '[site_name] (Site Title) or [brand_name] (organization name in Yoast). In a Heading, use the Shortcode dynamic tag',
 		'Logo'         => 'Site Logo widget or [brand_logo], so it follows the logo on the Brand screen',
 		'Holiday'      => 'Add it under Locations > Holidays and use [location_closure_notice] or [location_holidays]',
 		'Year'         => '[current_year]',
 		'Yoast SEO'    => 'Use %%location_city%%, %%location_phone%% and the other location variables (wp smc location yoast-vars converts them)',
 	];
+
+	const STATES = [ 'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas', 'CA' => 'California', 'CO' => 'Colorado', 'CT' => 'Connecticut', 'DE' => 'Delaware', 'DC' => 'District of Columbia', 'FL' => 'Florida', 'GA' => 'Georgia', 'HI' => 'Hawaii', 'ID' => 'Idaho', 'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa', 'KS' => 'Kansas', 'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland', 'MA' => 'Massachusetts', 'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi', 'MO' => 'Missouri', 'MT' => 'Montana', 'NE' => 'Nebraska', 'NV' => 'Nevada', 'NH' => 'New Hampshire', 'NJ' => 'New Jersey', 'NM' => 'New Mexico', 'NY' => 'New York', 'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio', 'OK' => 'Oklahoma', 'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'RI' => 'Rhode Island', 'SC' => 'South Carolina', 'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah', 'VT' => 'Vermont', 'VA' => 'Virginia', 'WA' => 'Washington', 'WV' => 'West Virginia', 'WI' => 'Wisconsin', 'WY' => 'Wyoming' ];
 
 	/** The plugin's own shortcodes: text inside these is already connected. */
 	const OWN = 'location|location_[a-z_]+|site_name|brand_name|brand_logo|current_year|current_slug|review|team';
@@ -290,8 +293,27 @@ class SMC_Location_Scanner {
 			$this->add( $findings, 'Map', 'Embedded map: ' . ( strlen( $m[0] ) > 90 ? substr( $m[0], 0, 87 ) . '...' : $m[0] ), $widget );
 		}
 
+		$plain = html_entity_decode( wp_strip_all_tags( preg_replace( '#<br\s*/?>#i', ' ', $s ) ), ENT_QUOTES, 'UTF-8' );
+		$plain = trim( preg_replace( '/\s+/u', ' ', str_replace( "\xC2\xA0", ' ', $plain ) ) );
+
+		// "Springfield, MA" or "Springfield, Massachusetts" typed in. A zip right after means it's the address.
+		foreach ( $this->city_states as $cs => $loc ) {
+			$parts = array_map( 'trim', explode( ',', $cs, 2 ) );
+			if ( 2 !== count( $parts ) ) {
+				continue;
+			}
+			$state = [ preg_quote( $parts[1], '/' ) ];
+			if ( isset( self::STATES[ strtoupper( $parts[1] ) ] ) ) {
+				$state[] = preg_quote( self::STATES[ strtoupper( $parts[1] ) ], '/' );
+			}
+			// Not a neighboring town with the same name in it ("West Springfield, MA").
+			$re = '/(?<![\w-])(?<!west )(?<!east )(?<!north )(?<!south )(?<!new )' . preg_quote( $parts[0], '/' ) . ',\s*(?:' . implode( '|', $state ) . ')(?![\w-])(\s*\d{5})?/i';
+			if ( preg_match( $re, $plain, $m, PREG_OFFSET_CAPTURE ) ) {
+				$this->add( $findings, ! empty( $m[1][0] ) ? 'Address' : 'City and state', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget, $loc );
+			}
+		}
+
 		// The site or organization name typed in (not in a URL or email, e.g. brightsmiledental.com).
-		$plain = wp_strip_all_tags( $s );
 		foreach ( $this->site_names as $n ) {
 			if ( preg_match( '/(?<![\w@.\/-])' . preg_quote( $n, '/' ) . '(?![\w.@-]*\.(?:com|net|org))(?!\w)/i', $plain, $m, PREG_OFFSET_CAPTURE ) ) {
 				$this->add( $findings, 'Site name', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget );
