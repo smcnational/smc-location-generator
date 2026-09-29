@@ -24,8 +24,8 @@ defined( 'ABSPATH' ) || exit;
 
 class SMC_Location_List {
 
-	const TAX     = 'location_category';
-	const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+	const TAX            = 'location_category';
+	const LEAFLET_VERSION = '1.9.4';
 
 	public static function init() {
 		add_action( 'init', function () {
@@ -135,13 +135,24 @@ class SMC_Location_List {
 		$cols    = max( 1, min( 4, (int) $a['columns'] ) );
 		$days    = array_values( SMC_Location_Fields::DAYS );
 
-		if ( $has_map ) {
-			wp_enqueue_style( 'leaflet', self::LEAFLET . 'leaflet.min.css', [], '1.9.4' );
-			wp_enqueue_script( 'leaflet', self::LEAFLET . 'leaflet.min.js', [], '1.9.4', true );
-		}
-		wp_enqueue_script( 'smc-location-list', false, $has_map ? [ 'leaflet' ] : [], null, true );
-
 		ob_start();
+		// Assets go straight into the output (not wp_enqueue), so the list also works when
+		// Elementor caches the widget's HTML and in the Elementor editor preview.
+		static $leaflet = false;
+		if ( $has_map && ! $leaflet ) {
+			$leaflet = true;
+			$base    = plugins_url( 'vendor/leaflet/', SMC_LOCATION_FILE );
+			printf( '<link rel="stylesheet" href="%s">', esc_url( $base . 'leaflet.css?ver=' . self::LEAFLET_VERSION ) ); // phpcs:ignore WordPress.WP.EnqueuedResources
+			printf( '<script src="%s"></script>', esc_url( $base . 'leaflet.js?ver=' . self::LEAFLET_VERSION ) ); // phpcs:ignore WordPress.WP.EnqueuedResources
+		}
+		if ( ! $has_map && $yes( $a['map'] ) && current_user_can( 'edit_pages' ) ) {
+			// Only editors see this: say why there's no map instead of leaving them guessing.
+			$missing = wp_list_pluck( array_filter( $items, fn( $i ) => ! $i['ll'] ), 'name' );
+			echo '<p class="smc-loclist-notice">No map: none of these locations has a Google Map embed with coordinates (' . esc_html( implode( ', ', $missing ) ) . '). Paste each one\'s embed code from Google Maps (Share &gt; Embed a map) on its edit screen under Locations. Only people who can edit pages see this note.</p>';
+		} elseif ( $has_map && count( $pins ) < count( $items ) && current_user_can( 'edit_pages' ) ) {
+			$missing = wp_list_pluck( array_filter( $items, fn( $i ) => ! $i['ll'] ), 'name' );
+			echo '<p class="smc-loclist-notice">Not on the map (no Google Map embed with coordinates): ' . esc_html( implode( ', ', $missing ) ) . '. Only people who can edit pages see this note.</p>';
+		}
 		?>
 		<div class="smc-loclist<?php echo $has_map ? ' has-map' : ''; ?>" id="<?php echo esc_attr( $id ); ?>" style="--smc-cols:<?php echo (int) $cols; ?>">
 			<?php if ( $yes( $a['search'] ) ) : ?>
@@ -190,8 +201,8 @@ class SMC_Location_List {
 			</div>
 		</div>
 		<?php
+		echo '<script>' . self::script( $id, $days ) . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		$html = ob_get_clean();
-		wp_add_inline_script( 'smc-location-list', self::script( $id, $days ) );
 		static $css = false;
 		if ( ! $css ) {
 			$css   = true;
@@ -234,8 +245,10 @@ class SMC_Location_List {
 	// Map.
 	var map = null, markers = {};
 	var mapEl = root.querySelector( '.smc-loclist-map' );
+	var waited = 0;
 	function initMap() {
-		if ( ! mapEl || ! window.L ) { return; }
+		if ( ! mapEl || map ) { return; }
+		if ( ! window.L ) { if ( waited++ < 100 ) { setTimeout( initMap, 100 ); } return; }
 		var color = getComputedStyle( document.documentElement ).getPropertyValue( '--e-global-color-primary' ).trim() || '#2271b1';
 		map = L.map( mapEl, { scrollWheelZoom: false } );
 		L.tileLayer( cfg.tiles.url, { attribution: cfg.tiles.attribution, maxZoom: 18 } ).addTo( map );
@@ -337,7 +350,7 @@ JS;
 			. '.smc-loclist-search input{flex:1 1 220px;min-width:0}'
 			. '.smc-loclist-search button{cursor:pointer}'
 			. '.smc-loclist-near,.smc-loclist-reset{background:none;border:0;padding:0 6px;text-decoration:underline;color:inherit}'
-			. '.smc-loclist-status{margin:0 0 12px;min-height:1.2em;font-size:.9em;opacity:.8}'
+			. '.smc-loclist-notice{padding:10px 14px;border-left:4px solid #dba617;background:#fcf9e8;font-size:.9em}.smc-loclist-status{margin:0 0 12px;min-height:1.2em;font-size:.9em;opacity:.8}'
 			. '.smc-loclist-body{display:grid;gap:24px}'
 			. '.smc-loclist-items{display:grid;gap:16px;grid-template-columns:repeat(var(--smc-cols,3),minmax(0,1fr))}'
 			. '.smc-loclist.has-map .smc-loclist-body{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}'
