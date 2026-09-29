@@ -200,6 +200,18 @@ All pages of a location share one business (`@id` is the main page URL + `#local
 
 Each location's edit screen shows its schema and links to Google's Rich Results Test for the live page. Reviews aren't included: Google doesn't show star ratings for a business's own reviews on its own site.
 
+## Holiday closures
+
+**Locations > Holidays** holds the days offices are closed or keep different hours. Each entry has a date (and optionally an end date for a range), a name, hours (blank = closed all day, or e.g. `9:00 AM - 12:00 PM`) and the locations it applies to (none ticked = all).
+
+- **Add common holidays** fills in New Year's Day, Memorial Day, Independence Day, Labor Day, Thanksgiving and Christmas Day for a year (the day after Thanksgiving, Christmas Eve and New Year's Eve can be ticked too), for every location. Ones already on the list are skipped. Holidays stay on their real date; move one to the Friday or Monday by hand if the offices observe it then.
+- `[location_closure_notice]` shows a notice in the 14 days before a closure and during it, and nothing the rest of the year: "Our Springfield office will be closed Thursday, November 26 for Thanksgiving." Change the window with `days="7"`, and the wording with `closed="..."` and `special="..."` using `{who}`, `{date}`, `{label}` and `{hours}`. On Corporate pages it says "Our offices" and shows closures that apply to every location.
+- `[location_holidays]` lists the page's location's upcoming closures ("Thursday, November 26: closed for Thanksgiving"). `limit="5"`, `days="90"`. Shows nothing when there are none.
+- `[location_list]` shows "Closed today (Thanksgiving)" or the holiday hours on the day.
+- Each location's schema includes its holidays as special opening hours (`validFrom` / `validThrough`), which Google can show as holiday hours.
+- The notice, the list and the locations list decide what to show in the visitor's browser, so they're right even on cached pages.
+- Holidays are included in Export / Import (with Settings). Locations are matched by slug. **Remove past holidays** tidies the list.
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:

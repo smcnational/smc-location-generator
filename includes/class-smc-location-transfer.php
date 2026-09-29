@@ -109,6 +109,9 @@ class SMC_Location_Transfer {
 
 		if ( in_array( 'settings', $sections, true ) && class_exists( 'SMC_Location_Settings' ) ) {
 			$out['sections']['settings'] = (array) get_option( SMC_Location_Settings::OPTION, [] );
+			if ( class_exists( 'SMC_Location_Holidays' ) ) {
+				$out['sections']['settings']['_holidays'] = SMC_Location_Holidays::all();
+			}
 		}
 
 		return $out;
@@ -366,7 +369,12 @@ class SMC_Location_Transfer {
 		}
 
 		if ( in_array( 'settings', $sections, true ) && isset( $s['settings'] ) && class_exists( 'SMC_Location_Settings' ) ) {
-			update_option( SMC_Location_Settings::OPTION, array_merge( SMC_Location_Settings::defaults(), (array) $s['settings'] ) );
+			$settings = (array) $s['settings'];
+			if ( isset( $settings['_holidays'] ) && class_exists( 'SMC_Location_Holidays' ) ) {
+				SMC_Location_Holidays::save( array_values( array_filter( (array) $settings['_holidays'], 'is_array' ) ) );
+			}
+			unset( $settings['_holidays'] );
+			update_option( SMC_Location_Settings::OPTION, array_merge( SMC_Location_Settings::defaults(), $settings ) );
 			$done[] = 'Settings: display settings replaced.';
 		}
 

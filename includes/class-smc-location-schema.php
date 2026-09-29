@@ -141,9 +141,11 @@ class SMC_Location_Schema {
 			$node['geo'] = [ '@type' => 'GeoCoordinates', 'latitude' => round( $ll[0], 6 ), 'longitude' => round( $ll[1], 6 ) ];
 		}
 
-		$hours = self::hours( $tid );
-		if ( $hours['specs'] ) {
-			$node['openingHoursSpecification'] = $hours['specs'];
+		$hours   = self::hours( $tid );
+		$special = class_exists( 'SMC_Location_Holidays' ) ? SMC_Location_Holidays::schema_specs( $tid ) : [];
+		if ( $hours['specs'] || $special ) {
+			// Regular weekly hours, then holiday closures and hours (validFrom / validThrough).
+			$node['openingHoursSpecification'] = array_merge( $hours['specs'], $special );
 		}
 
 		$gbp = $m( 'google_business_url' );

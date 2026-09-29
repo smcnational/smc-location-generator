@@ -102,6 +102,7 @@ class SMC_Location_List {
 				'booking' => $m( 'booking_link' ),
 				'hours'   => $hours,
 				'll'      => self::coords( $t->term_id ),
+				'holidays' => class_exists( 'SMC_Location_Holidays' ) ? SMC_Location_Holidays::for_list( $is_corp ? 0 : $t->term_id ) : [],
 			];
 		}
 		return apply_filters( 'smc_location_list_items', $out );
@@ -177,7 +178,8 @@ class SMC_Location_List {
 						?>
 						<article class="smc-loclist-item" data-id="<?php echo (int) $i['id']; ?>" data-search="<?php echo esc_attr( $search ); ?>"
 							<?php if ( $i['ll'] ) : ?>data-lat="<?php echo esc_attr( $i['ll'][0] ); ?>" data-lng="<?php echo esc_attr( $i['ll'][1] ); ?>"<?php endif; ?>
-							data-hours="<?php echo esc_attr( wp_json_encode( $i['hours'] ) ); ?>">
+							data-hours="<?php echo esc_attr( wp_json_encode( $i['hours'] ) ); ?>"
+							<?php if ( $i['holidays'] ) : ?>data-holidays="<?php echo esc_attr( wp_json_encode( $i['holidays'] ) ); ?>"<?php endif; ?>>
 							<h3 class="smc-loclist-name"><a href="<?php echo esc_url( $i['url'] ); ?>"><?php echo esc_html( $i['name'] ); ?></a> <span class="smc-loclist-distance"></span></h3>
 							<?php if ( $i['lines'] ) : ?>
 								<div class="smc-loclist-address"><?php echo implode( '<br>', array_map( 'esc_html', $i['lines'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
@@ -231,12 +233,20 @@ class SMC_Location_List {
 	var order = items.slice();
 
 	// Today's hours, in the visitor's own week (pages may be cached, so this runs in the browser).
-	var today = ( new Date().getDay() + 6 ) % 7; // Monday = 0
+	var now = new Date(), today = ( now.getDay() + 6 ) % 7; // Monday = 0
+	var ymd = now.getFullYear() + '-' + ( '0' + ( now.getMonth() + 1 ) ).slice( -2 ) + '-' + ( '0' + now.getDate() ).slice( -2 );
 	items.forEach( function ( el ) {
 		var box = el.querySelector( '.smc-loclist-today' );
 		if ( ! box ) { return; }
-		var h = [];
-		try { h = JSON.parse( el.getAttribute( 'data-hours' ) || '[]' ); } catch ( e ) {}
+		var h = [], hol = [];
+		try { h = JSON.parse( el.getAttribute( 'data-hours' ) || '[]' ); hol = JSON.parse( el.getAttribute( 'data-holidays' ) || '[]' ); } catch ( e ) {}
+		// A holiday today wins over the usual hours.
+		var off = hol.filter( function ( x ) { return x.from <= ymd && x.to >= ymd; } )[0];
+		if ( off ) {
+			var esc = function ( s ) { return String( s ).replace( /</g, '&lt;' ); };
+			box.innerHTML = off.hours ? '<strong>Today (' + esc( off.label ) + '):</strong> ' + esc( off.hours ) : '<strong>Closed today</strong> (' + esc( off.label ) + ')';
+			return;
+		}
 		var t = ( h[ today ] || '' ).trim();
 		if ( ! t || 'none' === t.toLowerCase() ) { return; }
 		box.innerHTML = '<strong>' + ( /^closed$/i.test( t ) ? 'Closed today' : 'Today:' ) + '</strong>' + ( /^closed$/i.test( t ) ? '' : ' ' + t.replace( /</g, '&lt;' ) );
