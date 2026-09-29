@@ -65,6 +65,10 @@ class SMC_Location_Holidays {
 			'border_side'  => 'left',
 			'border_width' => '',
 			'radius'       => '',
+			'font'         => '',
+			'family'       => '',
+			'weight'       => '',
+			'size'         => '',
 			'closed'       => '{who} will be closed {date} for {label}.',
 			'special'      => '{who} will be open {hours} on {date} for {label}.',
 		];
@@ -88,6 +92,43 @@ class SMC_Location_Holidays {
 			}
 		}
 		return $out;
+	}
+
+	/** Elementor global fonts: id => [ title, family ]. */
+	public static function global_fonts() {
+		$out = [];
+		if ( class_exists( 'SMC_Location_Brand' ) && SMC_Location_Brand::kit_id() ) {
+			$s = (array) get_post_meta( SMC_Location_Brand::kit_id(), '_elementor_page_settings', true );
+			foreach ( array_merge( (array) ( $s['system_typography'] ?? [] ), (array) ( $s['custom_typography'] ?? [] ) ) as $f ) {
+				if ( ! empty( $f['_id'] ) ) {
+					$out[ $f['_id'] ] = [ $f['title'] ?? $f['_id'], (string) ( $f['typography_font_family'] ?? '' ) ];
+				}
+			}
+		}
+		return $out;
+	}
+
+	/** A font family name that's safe to put in CSS, or "". */
+	private static function clean_family( $f ) {
+		$f = trim( (string) $f );
+		return preg_match( '/^[A-Za-z0-9 \-]{2,60}$/', $f ) ? $f : '';
+	}
+
+	/**
+	 * <link> for a custom font from Google Fonts, printed once, when Elementor would load it
+	 * that way too (it's a Google font and Elementor's Google Fonts aren't turned off).
+	 */
+	private static function font_link( $family ) {
+		static $done = [];
+		if ( '' === $family || isset( $done[ $family ] ) || ! class_exists( '\Elementor\Fonts' ) ) {
+			return '';
+		}
+		$done[ $family ] = true;
+		$type = \Elementor\Fonts::get_font_type( $family );
+		if ( ! in_array( $type, [ 'googlefonts', 'earlyaccess' ], true ) || '0' === (string) get_option( 'elementor_google_font', '1' ) ) {
+			return '';
+		}
+		return '<link rel="stylesheet" href="' . esc_url( 'https://fonts.googleapis.com/css2?family=' . rawurlencode( $family ) . ':wght@300;400;500;600;700;800;900&display=swap' ) . '">'; // phpcs:ignore WordPress.WP.EnqueuedResources
 	}
 
 	/* ========== Data ========== */
@@ -243,6 +284,20 @@ class SMC_Location_Holidays {
 			$out['border_side']  = in_array( $in['border_side'] ?? '', [ 'left', 'top', 'bottom', 'all', 'none' ], true ) ? $in['border_side'] : 'left';
 			$w                   = trim( (string) ( $in['border_width'] ?? '' ) );
 			$out['border_width'] = is_numeric( $w ) ? (string) (float) $w : '';
+			$font        = sanitize_text_field( $in['font'] ?? '' );
+			$out['font'] = ( 'custom' === $font || ( 0 === strpos( $font, 'global:' ) && isset( self::global_fonts()[ substr( $font, 7 ) ] ) ) ) ? $font : '';
+			$fam         = sanitize_text_field( $in['family'] ?? '' );
+			if ( 'custom' === $out['font'] && '' !== trim( $fam ) && '' === self::clean_family( $fam ) ) {
+				$bad[] = 'Font';
+			}
+			$out['family'] = 'custom' === $out['font'] ? self::clean_family( $fam ) : '';
+			$out['weight'] = in_array( (string) ( $in['weight'] ?? '' ), [ '300', '400', '500', '600', '700', '800', '900' ], true ) ? (string) $in['weight'] : '';
+			$size          = trim( (string) ( $in['size'] ?? '' ) );
+			if ( '' !== $size && ( ! is_numeric( $size ) || (float) $size < 8 || (float) $size > 60 ) ) {
+				$bad[] = 'Font size';
+				$size  = '';
+			}
+			$out['size'] = '' === $size ? '' : (string) (float) $size;
 			foreach ( [ 'closed', 'special' ] as $k ) {
 				$t         = trim( sanitize_text_field( $in[ $k ] ?? '' ) );
 				$out[ $k ] = '' === $t ? self::style_defaults()[ $k ] : $t;
@@ -421,6 +476,13 @@ class SMC_Location_Holidays {
 		$who    = str_replace( '{location}', $first ? $first->name : 'Springfield', 'Our {location} office' );
 		$text   = strtr( $st['closed'], [ '{who}' => $who, '{date}' => self::date_text( $sample ), '{label}' => 'Thanksgiving', '{hours}' => '' ] );
 		$map    = array_map( fn( $c ) => $c[1], $colors );
+		$fonts  = self::global_fonts();
+		$fmap   = array_map( fn( $f ) => $f[1], $fonts );
+		$all_fonts = class_exists( '\\Elementor\\Fonts' ) ? array_keys( (array) \Elementor\Fonts::get_fonts() ) : [];
+		$pv_fam = 'custom' === $st['font'] ? $st['family'] : ( 0 === strpos( $st['font'], 'global:' ) ? ( $fmap[ substr( $st['font'], 7 ) ] ?? '' ) : '' );
+		if ( $pv_fam ) {
+			echo '<link rel="stylesheet" href="' . esc_url( 'https://fonts.googleapis.com/css2?family=' . rawurlencode( $pv_fam ) . ':wght@300;400;500;600;700;800;900&display=swap' ) . '">'; // phpcs:ignore WordPress.WP.EnqueuedResources
+		}
 		?>
 		<h2 id="notice">Closure notice</h2>
 		<p>How <code>[location_closure_notice]</code> looks and reads everywhere on the site. Put it in each location's header template (and Corporate's), below the navigation, in a container with no padding. Options on a single shortcode still override these.</p>
@@ -447,11 +509,29 @@ class SMC_Location_Holidays {
 				</td></tr>
 				<tr><th scope="row">Padding</th><td><input name="style[padding]" class="code" size="10" value="<?php echo esc_attr( $st['padding'] ); ?>" placeholder="12 16"> px <span class="description">Like CSS: <code>12 16</code> is 12 top and bottom, 16 left and right.</span></td></tr>
 				<tr><th scope="row">Corner radius</th><td><input name="style[radius]" class="small-text" value="<?php echo esc_attr( $st['radius'] ); ?>" placeholder="0"> px</td></tr>
+				<tr><th scope="row">Font</th><td>
+					<select name="style[font]" class="smc-n-font">
+						<option value="">Default (the site's text)</option>
+						<?php foreach ( $fonts as $id => [ $ftitle, $ffam ] ) : ?>
+							<option value="global:<?php echo esc_attr( $id ); ?>" data-family="<?php echo esc_attr( $ffam ); ?>" <?php selected( $st['font'], "global:$id" ); ?>>Global: <?php echo esc_html( $ftitle . ( $ffam ? " ($ffam)" : '' ) ); ?></option>
+						<?php endforeach; ?>
+						<option value="custom" <?php selected( $st['font'], 'custom' ); ?>>Custom&hellip;</option>
+					</select>
+					<input name="style[family]" class="smc-n-family" list="smc-n-fonts" placeholder="Font name" value="<?php echo esc_attr( $st['family'] ); ?>">
+					<datalist id="smc-n-fonts"><?php foreach ( $all_fonts as $f ) : ?><option value="<?php echo esc_attr( $f ); ?>"><?php endforeach; ?></datalist>
+					<select name="style[weight]">
+						<?php foreach ( [ '' => 'Default weight', '300' => '300 Light', '400' => '400 Regular', '500' => '500 Medium', '600' => '600 Semi-bold', '700' => '700 Bold', '800' => '800 Extra-bold', '900' => '900 Black' ] as $k => $l ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $st['weight'], (string) $k ); ?>><?php echo esc_html( $l ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<input name="style[size]" class="small-text" value="<?php echo esc_attr( $st['size'] ); ?>" placeholder="16"> px
+					<p class="description"><strong>Global</strong> uses one of the fonts on the Brand screen and follows it if it changes. <strong>Custom</strong> takes any Google font name (loaded only on pages with a notice) or a font already on the site.</p>
+				</td></tr>
 				<tr><th scope="row">Wording when closed</th><td><input name="style[closed]" class="large-text" value="<?php echo esc_attr( $st['closed'] ); ?>"></td></tr>
 				<tr><th scope="row">Wording for holiday hours</th><td><input name="style[special]" class="large-text" value="<?php echo esc_attr( $st['special'] ); ?>">
 					<p class="description"><code>{who}</code> is "Our Springfield office" on a location's pages and "Our offices" on Corporate pages. <code>{date}</code> "Thursday, November 26", <code>{label}</code> the holiday's name, <code>{hours}</code> its hours.</p></td></tr>
 				<tr><th scope="row">Preview</th><td>
-					<div class="smc-closure-notice smc-n-preview" style="<?php echo esc_attr( self::notice_style( $st, $map ) ); ?>" data-who="<?php echo esc_attr( $who ); ?>" data-date="<?php echo esc_attr( self::date_text( $sample ) ); ?>"><p><?php echo esc_html( $text ); ?></p></div>
+					<div class="smc-closure-notice smc-n-preview" style="<?php echo esc_attr( self::notice_style( $st, $map, $fmap ) ); ?>" data-who="<?php echo esc_attr( $who ); ?>" data-date="<?php echo esc_attr( self::date_text( $sample ) ); ?>"><p><?php echo esc_html( $text ); ?></p></div>
 					<p class="description">Fonts come from the site, so the text looks slightly different here.</p>
 				</td></tr>
 			</table>
@@ -459,7 +539,8 @@ class SMC_Location_Holidays {
 		</form>
 		<style>
 			.smc-n-preview { max-width: 700px; padding: 12px 16px; border-left: 4px solid <?php echo esc_html( $map['primary'] ?? '#2271b1' ); ?>; background: rgba(0,0,0,.04); }
-			.smc-n-preview p { margin: 0; color: inherit; font-size: 15px; }
+			.smc-n-preview { font-size: 15px; }
+			.smc-n-preview p { margin: 0; color: inherit; font: inherit; }
 		</style>
 		<script>
 		( function () {
@@ -474,6 +555,7 @@ class SMC_Location_Holidays {
 			}
 			function sides( v ) { v = ( v || '' ).trim(); return v && /^[\d.\s,]+$/.test( v ) ? v.split( /[\s,]+/ ).map( function ( n ) { return n + 'px'; } ).join( ' ' ) : ''; }
 			function val( n ) { return form.querySelector( '[name="style[' + n + ']"]' ).value; }
+			var loaded = {};
 			function update() {
 				var s = box.style, bc = color( 'border' ), side = val( 'border_side' ), w = ( val( 'border_width' ) || '4' ) + 'px';
 				s.cssText = '';
@@ -488,6 +570,21 @@ class SMC_Location_Holidays {
 					( 'all' === side ? [ 'Top', 'Right', 'Bottom', 'Left' ] : [ side.charAt( 0 ).toUpperCase() + side.slice( 1 ) ] ).forEach( function ( sd ) { s[ 'border' + sd ] = w + ' solid ' + c; } );
 				}
 				if ( sides( val( 'radius' ) ) ) { s.borderRadius = sides( val( 'radius' ) ); }
+				var fsel = form.querySelector( '.smc-n-font' ), fin = form.querySelector( '.smc-n-family' ), fam = '';
+				fin.style.display = 'custom' === fsel.value ? '' : 'none';
+				if ( 'custom' === fsel.value ) { fam = fin.value.trim(); }
+				else if ( fsel.value ) { fam = fsel.options[ fsel.selectedIndex ].getAttribute( 'data-family' ) || ''; }
+				if ( fam && /^[A-Za-z0-9 \-]+$/.test( fam ) ) {
+					if ( ! loaded[ fam ] ) {
+						loaded[ fam ] = true;
+						var l = document.createElement( 'link' ); l.rel = 'stylesheet';
+						l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent( fam ) + ':wght@300;400;500;600;700;800;900&display=swap';
+						document.head.appendChild( l );
+					}
+					s.fontFamily = "'" + fam + "', sans-serif";
+				}
+				if ( val( 'weight' ) ) { s.fontWeight = val( 'weight' ); }
+				if ( val( 'size' ) && ! isNaN( parseFloat( val( 'size' ) ) ) ) { s.fontSize = parseFloat( val( 'size' ) ) + 'px'; }
 				box.querySelector( 'p' ).textContent = val( 'closed' ).split( '{who}' ).join( box.getAttribute( 'data-who' ) ).split( '{date}' ).join( box.getAttribute( 'data-date' ) ).split( '{label}' ).join( 'Thanksgiving' ).split( '{hours}' ).join( '' );
 			}
 			form.addEventListener( 'input', update );
@@ -577,7 +674,8 @@ class SMC_Location_Holidays {
 			return '';
 		}
 		$style = self::notice_style( $a );
-		$html  = '<div class="smc-closure-notice" role="status" data-days="' . (int) $a['days'] . '"' . ( '' !== $style ? ' style="' . esc_attr( $style ) . '"' : '' ) . '>';
+		$fam   = self::clean_family( $a['family'] ?? '' );
+		$html  = ( '' !== $fam && 0 !== strpos( (string) $a['font'], 'global:' ) ? self::font_link( $fam ) : '' ) . '<div class="smc-closure-notice" role="status" data-days="' . (int) $a['days'] . '"' . ( '' !== $style ? ' style="' . esc_attr( $style ) . '"' : '' ) . '>';
 		foreach ( $items as $i ) {
 			$html .= '<p data-from="' . esc_attr( $i['from'] ) . '" data-to="' . esc_attr( $i['to'] ) . '" hidden>' . esc_html( $i['text'] ) . '</p>';
 		}
@@ -610,8 +708,30 @@ class SMC_Location_Holidays {
 	}
 
 	/** Inline style for the notice from its look options. Only what was set; the rest keeps the default look. */
-	private static function notice_style( array $a, array $map = [] ) {
-		$css = [];
+	private static function notice_style( array $a, array $map = [], array $fmap = [] ) {
+		$css  = [];
+		$font = (string) ( $a['font'] ?? '' );
+		if ( 0 === strpos( $font, 'global:' ) ) {
+			$id = sanitize_key( substr( $font, 7 ) );
+			if ( isset( $fmap[ $id ] ) && '' !== $fmap[ $id ] ) {
+				$css[] = "font-family:'" . self::clean_family( $fmap[ $id ] ) . "',sans-serif"; // Admin preview.
+			} else {
+				$css[] = "font-family:var(--e-global-typography-$id-font-family)";
+				if ( '' === (string) ( $a['weight'] ?? '' ) ) {
+					$css[] = "font-weight:var(--e-global-typography-$id-font-weight)";
+				}
+			}
+		} elseif ( 'custom' === $font && '' !== self::clean_family( $a['family'] ?? '' ) ) {
+			$css[] = "font-family:'" . self::clean_family( $a['family'] ) . "',sans-serif";
+		} elseif ( '' !== self::clean_family( $a['family'] ?? '' ) && '' === $font ) {
+			$css[] = "font-family:'" . self::clean_family( $a['family'] ) . "',sans-serif"; // family="..." on the shortcode.
+		}
+		if ( preg_match( '/^[1-9]00$/', (string) ( $a['weight'] ?? '' ) ) ) {
+			$css[] = 'font-weight:' . $a['weight'];
+		}
+		if ( is_numeric( $a['size'] ?? '' ) && (float) $a['size'] >= 8 && (float) $a['size'] <= 60 ) {
+			$css[] = 'font-size:' . (float) $a['size'] . 'px';
+		}
 		if ( in_array( $a['align'], [ 'left', 'center', 'right' ], true ) ) {
 			$css[] = 'text-align:' . $a['align'];
 		}
@@ -671,7 +791,7 @@ class SMC_Location_Holidays {
 		}
 		$done = true;
 		return <<<'HTML'
-<style>.smc-closure-notice{padding:12px 16px;border-left:4px solid var(--e-global-color-primary,#2271b1);background:rgba(0,0,0,.04);margin:0 0 16px}.smc-closure-notice p{margin:0;color:inherit}.smc-closure-notice p+p{margin-top:6px}.smc-closure-notice.is-empty{display:none}.smc-holidays-list{margin:0;padding-left:1.2em}</style>
+<style>.smc-closure-notice{padding:12px 16px;border-left:4px solid var(--e-global-color-primary,#2271b1);background:rgba(0,0,0,.04);margin:0 0 16px}.smc-closure-notice p{margin:0;color:inherit;font-family:inherit;font-size:inherit;font-weight:inherit;line-height:inherit}.smc-closure-notice p+p{margin-top:6px}.smc-closure-notice.is-empty{display:none}.smc-holidays-list{margin:0;padding-left:1.2em}</style>
 <script>
 ( function () {
 	function run() {
