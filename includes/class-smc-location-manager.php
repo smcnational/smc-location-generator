@@ -147,10 +147,16 @@ class SMC_Location_Manager {
 				$this->error = 'Nothing was selected to delete.';
 				return;
 			}
+			$path   = self::location_path( $term );
 			$counts = $this->delete( $term, $what );
 			if ( is_string( $counts ) ) {
 				$this->error = $counts;
 				return;
+			}
+			$to = SMC_Location_Redirects::from_delete_form( $path, $term->name );
+			if ( $to ) {
+				$counts['redirect_from'] = $path;
+				$counts['redirect_to']   = $to;
 			}
 			wp_safe_redirect( self::url( array_merge( [ 'msg' => 'deleted', 'name' => rawurlencode( $term->name ) ], $counts ) ) );
 			exit;
@@ -328,6 +334,12 @@ class SMC_Location_Manager {
 		return $plan;
 	}
 
+	/** The location's main page path, e.g. "/kenton", or "/<slug>" if it has no page. */
+	public static function location_path( WP_Term $term ) {
+		$page = self::location_page( $term );
+		return '/' . ( $page ? get_page_uri( $page ) : $term->slug );
+	}
+
 	private function delete( WP_Term $term, $what ) {
 		$plan = $this->delete_plan( $term );
 		if ( $plan['blocked'] && in_array( 'pages', $what, true ) ) {
@@ -436,6 +448,15 @@ class SMC_Location_Manager {
 				absint( $_GET['menus'] ?? 0 ),
 				absint( $_GET['terms'] ?? 0 )
 			);
+			if ( ! empty( $_GET['redirect_to'] ) ) {
+				$rt = sanitize_text_field( wp_unslash( $_GET['redirect_to'] ) );
+				printf(
+					'<div class="notice notice-success is-dismissible"><p>Old URLs under <code>%s/</code> now redirect to <code>%s</code>. <a href="%s">Manage redirects</a></p></div>',
+					esc_html( sanitize_text_field( wp_unslash( $_GET['redirect_from'] ?? '' ) ) ),
+					esc_html( '/' === $rt ? '/' : $rt . '/' ),
+					esc_url( SMC_Location_Redirects::url() )
+				);
+			}
 		}
 
 		$action = sanitize_key( $_GET['action'] ?? '' );
@@ -673,7 +694,7 @@ class SMC_Location_Manager {
 		<?php endif; ?>
 
 		<div class="notice notice-warning inline">
-			<p><strong>Before you delete:</strong> this location's page URLs will stop working. Set up 301 redirects from <code>/<?php echo esc_html( $term->slug ); ?>/</code> to another location or the homepage, and remove this location from the store locator and any other menus that link to it.</p>
+			<p><strong>Before you delete:</strong> remove this location from the store locator and any other menus that link to it. Its page URLs are redirected below.</p>
 		</div>
 
 		<form method="post">
@@ -707,6 +728,8 @@ class SMC_Location_Manager {
 			<h2><label><input type="checkbox" name="what[]" value="terms" checked> Location details (<?php echo count( $term_labels ); ?>)</label></h2>
 			<p class="description">The location's address, phone, hours, social links and map, plus any page type used only by this location. Deleted permanently.</p>
 			<?php echo $list( $term_labels ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+
+			<?php SMC_Location_Redirects::render_delete_choice( $term, self::location_path( $term ) ); ?>
 
 			<h2>Confirm</h2>
 			<p><label for="confirm_name">Type <strong><?php echo esc_html( $term->name ); ?></strong> to confirm:</label><br>

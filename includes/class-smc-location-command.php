@@ -401,6 +401,54 @@ class SMC_Location_Command {
 		WP_CLI::success( SMC_Location_Yoast::apply( $all ) . ' Yoast field(s) updated.' );
 	}
 
+	/**
+	 * Lists, adds or removes location redirects.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<action>]
+	 * : list (default), add or remove.
+	 *
+	 * [<from>]
+	 * : Old path, e.g. /kenton/
+	 *
+	 * [<to>]
+	 * : New path, e.g. /lima/ or / for the homepage (add only).
+	 *
+	 * [--no-same]
+	 * : Send every page under <from> to <to> itself, instead of the same page at the new address.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp smc location redirects
+	 *     wp smc location redirects add /kenton/ /lima/
+	 *     wp smc location redirects remove /kenton/
+	 */
+	public function redirects( $args, $assoc ) {
+		$action = $args[0] ?? 'list';
+		if ( 'add' === $action ) {
+			if ( count( $args ) < 3 ) {
+				WP_CLI::error( 'Usage: wp smc location redirects add <from> <to>' );
+			}
+			if ( ! SMC_Location_Redirects::add( $args[1], $args[2], WP_CLI\Utils\get_flag_value( $assoc, 'same', true ), 'Added with WP-CLI' ) ) {
+				WP_CLI::error( 'Enter two different paths on this site. The homepage can\'t be redirected.' );
+			}
+			WP_CLI::success( 'Redirect saved.' );
+			return;
+		}
+		if ( 'remove' === $action ) {
+			SMC_Location_Redirects::remove( $args[1] ?? '' );
+			WP_CLI::success( 'Redirect removed.' );
+			return;
+		}
+		$hits = get_option( SMC_Location_Redirects::HITS, [] );
+		$rows = [];
+		foreach ( SMC_Location_Redirects::all() as $from => $r ) {
+			$rows[] = [ 'from' => "$from/", 'to' => '/' === $r['to'] ? '/' : "{$r['to']}/", 'same' => $r['same'] ? 'yes' : 'no', 'why' => $r['reason'], 'used' => (int) ( $hits[ $from ]['n'] ?? 0 ) ];
+		}
+		$rows ? WP_CLI\Utils\format_items( 'table', $rows, [ 'from', 'to', 'same', 'why', 'used' ] ) : WP_CLI::log( 'No redirects.' );
+	}
+
 	private function launch_term( $slug ) {
 		$term = get_term_by( 'slug', sanitize_title( $slug ), 'location_category' );
 		if ( ! $term ) {

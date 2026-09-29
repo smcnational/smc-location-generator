@@ -158,6 +158,17 @@ For example: `Dentist in %%location_city_state%% | %%sitename%%`. They also work
 
 **Converting existing pages:** `wp smc location yoast-vars` lists every typed-in city, phone, address and so on in the locations' Yoast fields and what it would become. Nothing changes until you add `--apply`. Limit it to some locations with their slugs: `wp smc location yoast-vars springfield --apply`.
 
+## Redirects
+
+**Locations > Redirects** holds 301 redirects for deleted and moved location pages. Each one covers a page and everything under it: `/oldtown/` also catches `/oldtown/services/implants/`.
+
+- **Deleting a location** adds one. The delete screen asks where to send visitors: another location (listed), the homepage, or any page. With **same page** on, `/oldtown/services/implants/` goes to `/springfield/services/implants/` if that page exists, otherwise the closest page above it, and finally `/springfield/`.
+- **Changing a location page's URL** (its slug or parent, on a published page) adds one from the old URL to the new one, subpages included. Changing it back removes it, and older redirects that pointed at the old URL are updated so there are no chains.
+- Redirects only apply when the old address would be a 404, so a real page at that address always wins (for example if the location comes back). The list says **Not in use** when that happens.
+- Query strings are kept (`?utm_source=...`). Each redirect shows how many times it's been used.
+- You can add or remove redirects by hand on the same screen, or with `wp smc location redirects`, `wp smc location redirects add /oldtown/ /springfield/` and `wp smc location redirects remove /oldtown/`.
+- If the site also runs the Redirection plugin or Yoast Premium redirects, those go first; these catch the rest.
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:
