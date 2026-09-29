@@ -235,13 +235,16 @@ New locations start with no reviews; they're never copied from another location.
 
 ## Brand
 
-**Locations > Brand** sets the site's logo, favicon, colors and fonts on one screen. It edits Elementor's own **Site Settings**, not a separate copy, so the two always match, and every widget set to a global color or font updates site-wide.
+**Locations > Brand** sets the site's logo, favicon, colors, fonts, text styles and buttons on one screen. It edits Elementor's own **Site Settings**, not a separate copy, so the two always match, and every widget set to a global color or font updates site-wide.
 
 - **Logo and favicon:** pick from the Media Library. The logo feeds Elementor's **Site Logo** widget and the theme. A header that uses a plain Image widget for its logo needs that widget switched to Site Logo (or changed by hand). Favicons should be square, at least 512 by 512 pixels.
 - **Mobile logo:** optional. On phones (or phones and tablets, your choice, using Elementor's breakpoints) it replaces the logo automatically in Elementor's Site Logo widget, in any Image widget showing the site logo, and in `[brand_logo]`. The browser downloads only the logo it shows, so there's no need for two logo widgets with hide-on-mobile. `[brand_logo]` shows the logo linked to the homepage (`link="none"` for no link, `width="220"` for a maximum width).
 - **Colors:** the four global colors (Primary, Secondary, Text, Accent) plus any custom colors, with color pickers. Rename them, add more, or remove custom ones. Values are hex codes; rgb/rgba also work.
 - **Fonts:** the font and weight for each global font. The list comes from Elementor (Google Fonts, system fonts, custom fonts) with a live preview. Sizes, line height and spacing stay as set in Elementor.
-- **Restore:** every save keeps the previous logo, favicon, colors and fonts (the last 10 saves), each with color swatches. **Restore** puts one back.
+- **Typography:** Elementor's default styles for body text, H1 to H6 and buttons (Site Settings > Typography). Each can be **Default**, **Global** (linked to one of the global fonts, like picking it in Elementor), or **Custom** with font, weight, size for desktop, tablet and mobile, line height and case. Body and heading colors can be a global color (stays linked) or a hex code. Also link and link hover colors. Widgets with their own style keep it.
+- **Buttons:** the default look of Elementor Button widgets (Site Settings > Buttons), which also covers the buttons in `[location_team]` and `[location_list]`: background, text color and border, each with a hover color, border style and width, corner radius and padding (desktop, tablet, mobile). Spacing is written like CSS: `14 28` is 14px top and bottom, 28px left and right. There's a live preview. The button font is the Buttons row under Typography.
+- These are Elementor's settings. Astra's own buttons and headings (Customizer) aren't changed.
+- **Restore:** every save keeps the previous version of all of the above (the last 10 saves), each with color swatches. **Restore** puts one back. Versions saved before typography and buttons were added restore only the logo, favicon, colors and fonts.
 
 ## Export / Import
 

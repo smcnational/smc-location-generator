@@ -16,6 +16,12 @@ class SMC_Location_Brand {
 	const CAP     = 'manage_options';
 	const HISTORY = 'smc_brand_history';
 	const OPTION  = 'smc_brand';
+	/** Elements styled under Typography & buttons: settings prefix => label. Same as Elementor > Site Settings > Typography / Buttons. */
+	const TYPO = [ 'body' => 'Body text', 'h1' => 'H1', 'h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'h5' => 'H5', 'h6' => 'H6', 'button' => 'Buttons' ];
+	const DEVICES   = [ '' => 'Desktop', '_tablet' => 'Tablet', '_mobile' => 'Mobile' ];
+	const SIZE_UNITS = [ 'px', 'rem', 'em' ];
+	const CASES     = [ '' => 'Default', 'uppercase' => 'UPPERCASE', 'capitalize' => 'Capitalize', 'lowercase' => 'lowercase', 'none' => 'Normal' ];
+	const BORDERS   = [ '' => 'Default', 'none' => 'None', 'solid' => 'Solid', 'dashed' => 'Dashed', 'dotted' => 'Dotted', 'double' => 'Double' ];
 	const WEIGHTS = [ '' => 'Default', '300' => '300 Light', '400' => '400 Regular', '500' => '500 Medium', '600' => '600 Semi-bold', '700' => '700 Bold', '800' => '800 Extra-bold', '900' => '900 Black' ];
 
 	private $notice = '';
@@ -172,7 +178,192 @@ class SMC_Location_Brand {
 			'custom_colors'     => $s['custom_colors'] ?? [],
 			'system_typography' => $s['system_typography'] ?? self::default_system_typography(),
 			'custom_typography' => $s['custom_typography'] ?? [],
+			'theme_style'       => self::theme_style_from( $s ),
 		];
+	}
+
+	/* ========== Typography & buttons (Elementor's Theme Style) ========== */
+
+	/** Every Site Settings key this screen manages for typography, links and buttons. */
+	public static function style_keys() {
+		$keys = [ 'link_normal_color', 'link_hover_color' ];
+		foreach ( array_keys( self::TYPO ) as $p ) {
+			foreach ( [ 'typography', 'font_family', 'font_weight', 'line_height', 'text_transform' ] as $f ) {
+				$keys[] = "{$p}_typography_$f";
+			}
+			foreach ( array_keys( self::DEVICES ) as $d ) {
+				$keys[] = "{$p}_typography_font_size$d";
+			}
+			$keys[] = self::color_key( $p );
+		}
+		foreach ( [ 'button_background_background', 'button_background_color', 'button_hover_text_color', 'button_hover_background_background', 'button_hover_background_color', 'button_border_border', 'button_border_width', 'button_border_color', 'button_hover_border_color', 'button_border_radius', 'button_padding', 'button_padding_tablet', 'button_padding_mobile' ] as $k ) {
+			$keys[] = $k;
+		}
+		return $keys;
+	}
+
+	/** Text color key for an element: body_color, h1_color, button_text_color. */
+	private static function color_key( $p ) {
+		return 'button' === $p ? 'button_text_color' : "{$p}_color";
+	}
+
+	/** The managed part of the kit settings: [ values => [ key => value ], globals => [ key => 'globals/colors?id=primary' ] ]. */
+	private static function theme_style_from( array $s ) {
+		$out = [ 'values' => [], 'globals' => [] ];
+		foreach ( self::style_keys() as $k ) {
+			if ( isset( $s[ $k ] ) && '' !== $s[ $k ] && [] !== $s[ $k ] ) {
+				$out['values'][ $k ] = $s[ $k ];
+			}
+			if ( ! empty( $s['__globals__'][ $k ] ) ) {
+				$out['globals'][ $k ] = $s['__globals__'][ $k ];
+			}
+		}
+		return $out;
+	}
+
+	/** The id in "globals/colors?id=primary", or ''. */
+	private static function global_id( $ref ) {
+		return preg_match( '/[?&]id=([\w-]+)/', (string) $ref, $m ) ? $m[1] : '';
+	}
+
+	/** "12 24" + px -> Elementor dimensions. null if blank, false if it isn't 1 to 4 numbers. */
+	private static function dims( $text, $unit ) {
+		$text = trim( (string) $text );
+		if ( '' === $text ) {
+			return null;
+		}
+		$n = preg_split( '/[\s,]+/', $text );
+		if ( count( $n ) > 4 || array_filter( $n, fn( $v ) => ! is_numeric( $v ) ) ) {
+			return false;
+		}
+		[ $t, $r, $b, $l ] = [ $n[0], $n[1] ?? $n[0], $n[2] ?? $n[0], $n[3] ?? ( $n[1] ?? $n[0] ) ];
+		return [ 'unit' => in_array( $unit, [ 'px', 'em', 'rem', '%' ], true ) ? $unit : 'px', 'top' => (string) $t, 'right' => (string) $r, 'bottom' => (string) $b, 'left' => (string) $l, 'isLinked' => 1 === count( array_unique( [ $t, $r, $b, $l ] ) ) ];
+	}
+
+	/** Elementor dimensions -> "12 24" (shortest CSS shorthand). */
+	private static function dims_text( $d ) {
+		if ( ! is_array( $d ) || ! isset( $d['top'] ) || '' === (string) $d['top'] ) {
+			return '';
+		}
+		$v = [ $d['top'], $d['right'] ?? $d['top'], $d['bottom'] ?? $d['top'], $d['left'] ?? $d['right'] ?? $d['top'] ];
+		if ( $v[3] === $v[1] ) {
+			array_pop( $v );
+			if ( $v[2] === $v[0] ) {
+				array_pop( $v );
+				if ( $v[1] === $v[0] ) {
+					array_pop( $v );
+				}
+			}
+		}
+		return implode( ' ', $v );
+	}
+
+	/** A number + unit -> Elementor slider value. null if blank, false if not a number. */
+	private static function slider( $n, $unit, $units ) {
+		$n = trim( sanitize_text_field( (string) $n ) );
+		if ( '' === $n ) {
+			return null;
+		}
+		if ( 'custom' === $unit ) {
+			return [ 'unit' => 'custom', 'size' => $n, 'sizes' => [] ]; // e.g. clamp(2rem, 4vw, 3rem), set in Elementor.
+		}
+		if ( ! is_numeric( $n ) ) {
+			return false;
+		}
+		$ok = array_merge( $units, [ 'vw', 'vh', '%' ] );
+		return [ 'unit' => in_array( $unit, $ok, true ) ? $unit : $units[0], 'size' => (float) $n, 'sizes' => [] ];
+	}
+
+	/**
+	 * Reads the Typography & buttons part of the form. Returns [ theme_style, bad field labels ].
+	 * Colors can be a global color (kept linked, so it follows the Colors above) or a hex code.
+	 */
+	private static function read_theme_style( array $p ) {
+		$in  = (array) ( $p['ts'] ?? [] );
+		$out = [ 'values' => [], 'globals' => [] ];
+		$bad = [];
+		$set = function ( $k, $v ) use ( &$out ) {
+			if ( null !== $v && '' !== $v ) {
+				$out['values'][ $k ] = $v;
+			}
+		};
+		$color = function ( $k, $field, $label ) use ( &$out, &$bad ) {
+			$g = sanitize_key( $field['g'] ?? '' );
+			if ( '' === $g ) {
+				return;
+			}
+			if ( 'custom' === $g ) {
+				$c = self::color( $field['hex'] ?? '' );
+				if ( null === $c ) {
+					$bad[] = $label;
+				} elseif ( '' !== $c ) {
+					$out['values'][ $k ] = $c;
+				}
+				return;
+			}
+			$out['globals'][ $k ]  = 'globals/colors?id=' . $g;
+			$out['values'][ $k ]   = '';
+		};
+		$num = function ( $k, $v, $label ) use ( $set, &$bad ) {
+			if ( false === $v ) {
+				$bad[] = $label;
+				return;
+			}
+			$set( $k, $v );
+		};
+
+		foreach ( self::TYPO as $pf => $label ) {
+			$row   = (array) ( $in[ $pf ] ?? [] );
+			$style = sanitize_text_field( $row['style'] ?? '' );
+			$t     = "{$pf}_typography";
+			if ( 0 === strpos( $style, 'global:' ) ) {
+				// A global font style links the whole typography, like choosing it in Elementor.
+				$out['globals'][ "{$t}_typography" ] = 'globals/typography?id=' . sanitize_key( substr( $style, 7 ) );
+				$out['values'][ "{$t}_typography" ]  = '';
+			} elseif ( 'custom' === $style ) {
+				$fam    = trim( sanitize_text_field( $row['family'] ?? '' ) );
+				$weight = sanitize_text_field( $row['weight'] ?? '' );
+				$set( "{$t}_font_family", $fam );
+				$set( "{$t}_font_weight", isset( self::WEIGHTS[ $weight ] ) ? $weight : '' );
+				foreach ( array_keys( self::DEVICES ) as $d ) {
+					$num( "{$t}_font_size$d", self::slider( $row['size'][ $d ?: 'd' ]['n'] ?? '', $row['size'][ $d ?: 'd' ]['u'] ?? 'px', self::SIZE_UNITS ), "$label size" );
+				}
+				$num( "{$t}_line_height", self::slider( $row['lh']['n'] ?? '', $row['lh']['u'] ?? 'em', [ 'em', 'px' ] ), "$label line height" );
+				$case = sanitize_key( $row['case'] ?? '' );
+				$set( "{$t}_text_transform", isset( self::CASES[ $case ] ) ? $case : '' );
+				$has = array_intersect_key( $out['values'], array_flip( array_filter( self::style_keys(), fn( $k ) => 0 === strpos( $k, "{$t}_" ) ) ) );
+				if ( $has ) {
+					$out['values'][ "{$t}_typography" ] = 'custom';
+				}
+			}
+			if ( 'button' !== $pf ) {
+				$color( self::color_key( $pf ), (array) ( $row['color'] ?? [] ), "$label color" );
+			}
+		}
+
+		$color( 'link_normal_color', (array) ( $in['link']['color'] ?? [] ), 'Link color' );
+		$color( 'link_hover_color', (array) ( $in['link']['hover'] ?? [] ), 'Link hover color' );
+
+		$b = (array) ( $in['btn'] ?? [] );
+		$color( 'button_text_color', (array) ( $b['text'] ?? [] ), 'Button text color' );
+		$color( 'button_background_color', (array) ( $b['bg'] ?? [] ), 'Button background' );
+		$color( 'button_hover_text_color', (array) ( $b['hover_text'] ?? [] ), 'Button hover text color' );
+		$color( 'button_hover_background_color', (array) ( $b['hover_bg'] ?? [] ), 'Button hover background' );
+		$color( 'button_border_color', (array) ( $b['border_color'] ?? [] ), 'Button border color' );
+		$color( 'button_hover_border_color', (array) ( $b['hover_border'] ?? [] ), 'Button hover border color' );
+		foreach ( [ 'button_background_color' => 'button_background_background', 'button_hover_background_color' => 'button_hover_background_background' ] as $ck => $bk ) {
+			if ( isset( $out['values'][ $ck ] ) ) {
+				$out['values'][ $bk ] = 'classic';
+			}
+		}
+		$border = sanitize_key( $b['border'] ?? '' );
+		$set( 'button_border_border', isset( self::BORDERS[ $border ] ) ? $border : '' );
+		$num( 'button_border_width', self::dims( $b['border_width'] ?? '', 'px' ), 'Button border width' );
+		$num( 'button_border_radius', self::dims( $b['radius']['v'] ?? '', $b['radius']['u'] ?? 'px' ), 'Button corner radius' );
+		foreach ( array_keys( self::DEVICES ) as $d ) {
+			$num( "button_padding$d", self::dims( $b['padding'][ $d ?: 'd' ]['v'] ?? '', $b['padding'][ $d ?: 'd' ]['u'] ?? 'px' ), 'Button padding (' . self::DEVICES[ $d ] . ')' );
+		}
+		return [ $out, $bad ];
 	}
 
 	/** Writes a snapshot back to Elementor and WordPress. */
@@ -181,6 +372,20 @@ class SMC_Location_Brand {
 		$s  = self::kit_settings();
 		foreach ( [ 'system_colors', 'custom_colors', 'system_typography', 'custom_typography' ] as $k ) {
 			$s[ $k ] = $b[ $k ];
+		}
+		// Typography & buttons. Versions saved before this existed don't have it, so they leave it alone.
+		if ( isset( $b['theme_style'] ) ) {
+			$g = isset( $s['__globals__'] ) && is_array( $s['__globals__'] ) ? $s['__globals__'] : [];
+			foreach ( self::style_keys() as $k ) {
+				unset( $s[ $k ], $g[ $k ] );
+			}
+			foreach ( (array) ( $b['theme_style']['values'] ?? [] ) as $k => $v ) {
+				$s[ $k ] = $v;
+			}
+			foreach ( (array) ( $b['theme_style']['globals'] ?? [] ) as $k => $v ) {
+				$g[ $k ] = $v;
+			}
+			$s['__globals__'] = $g;
 		}
 		$s['site_logo']    = $b['logo'] ? [ 'url' => (string) wp_get_attachment_image_url( $b['logo'], 'full' ), 'id' => $b['logo'] ] : [ 'url' => '', 'id' => '' ];
 		$s['site_favicon'] = $b['icon'] ? [ 'url' => (string) wp_get_attachment_image_url( $b['icon'], 'full' ), 'id' => $b['icon'] ] : [ 'url' => '', 'id' => '' ];
@@ -321,6 +526,13 @@ class SMC_Location_Brand {
 		if ( $bad ) {
 			$this->error = 'These colors weren\'t saved because the value isn\'t a color (use a hex code like #1A73E8): ' . implode( ', ', $bad ) . '.';
 		}
+		[ $ts, $ts_bad ] = self::read_theme_style( $p );
+		if ( $ts_bad ) {
+			// Keep the old typography & button settings rather than save half of them.
+			$this->error = trim( $this->error . ' Typography & buttons weren\'t saved; check these (sizes are numbers, colors hex codes like #1A73E8, spacing like "12 24"): ' . implode( ', ', $ts_bad ) . '.' );
+		} else {
+			$new['theme_style'] = $ts;
+		}
 		$compare = fn( $b ) => wp_json_encode( array_diff_key( $b, [ 'time' => 1, 'user' => 1 ] ) );
 		if ( $compare( $new ) === $compare( $old ) ) {
 			$this->notice = $bad ? '' : 'No changes to save.';
@@ -389,7 +601,7 @@ class SMC_Location_Brand {
 			<?php if ( $this->error ) : ?><div class="notice notice-error"><p><?php echo esc_html( $this->error ); ?></p></div><?php endif; ?>
 			<?php if ( $this->notice ) : ?><div class="notice notice-success"><p><?php echo esc_html( $this->notice ); ?></p></div><?php endif; ?>
 
-			<p>The site's logo, favicon, colors and fonts in one place. These are the same settings as <strong>Elementor &gt; Site Settings</strong>, so a change here shows up there too, and every widget set to a global color or font updates across the whole site.</p>
+			<p>The site's logo, favicon, colors, fonts, text styles and buttons in one place. These are the same settings as <strong>Elementor &gt; Site Settings</strong>, so a change here shows up there too, and every widget set to a global color or font updates across the whole site.</p>
 
 			<form method="post">
 				<?php wp_nonce_field( 'smc_brand_save' ); ?>
@@ -482,6 +694,8 @@ class SMC_Location_Brand {
 					<link rel="stylesheet" href="<?php echo esc_url( 'https://fonts.googleapis.com/css2?' . implode( '&', array_map( fn( $f ) => 'family=' . rawurlencode( $f ) . ':wght@300;400;500;600;700;800;900', array_unique( $google ) ) ) . '&display=swap' ); ?>">
 				<?php endif; ?>
 
+				<?php $this->render_theme_style( $b ); ?>
+
 				<?php submit_button( 'Save brand' ); ?>
 			</form>
 
@@ -494,6 +708,19 @@ class SMC_Location_Brand {
 			.smc-brand .smc-image-preview span { color: #787c82; }
 			.smc-brand .smc-colors, .smc-brand .smc-fonts { max-width: 900px; }
 			.smc-brand .smc-colors td, .smc-brand .smc-fonts td { vertical-align: middle; }
+			.smc-brand .smc-scroll { overflow-x: auto; max-width: 100%; }
+			.smc-brand .smc-typo { min-width: 1100px; }
+			.smc-brand .smc-typo td, .smc-brand .smc-typo th { vertical-align: middle; }
+			.smc-brand .smc-typo .smc-size input, .smc-brand .smc-typo input[name$='[lh][n]'] { width: 62px; }
+			.smc-brand .smc-typo tr.is-off .smc-c { opacity: .35; pointer-events: none; }
+			.smc-brand .smc-nowrap { white-space: nowrap; }
+			.smc-brand .smc-size { display: inline-block; margin-right: 6px; }
+			.smc-brand .smc-unit { min-width: 0; padding-right: 20px; }
+			.smc-brand .smc-color-choice { display: inline-flex; align-items: center; gap: 4px; }
+			.smc-brand .smc-color-swatch { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #c3c4c7; display: none; }
+			.smc-brand .smc-sep { margin: 0 6px 0 12px; color: #646970; }
+			.smc-brand .smc-pad { margin-right: 14px; display: inline-block; }
+			.smc-brand .smc-btn-preview { display: inline-block; text-decoration: none; margin-right: 10px; transition: all .2s; }
 		</style>
 		<script>
 		jQuery( function ( $ ) {
@@ -527,6 +754,52 @@ class SMC_Location_Brand {
 				$( this ).hide();
 			} );
 
+			// Typography: Default and Global rows grey out the custom fields.
+			function typoRow( row ) {
+				row.toggleClass( 'is-off', 'custom' !== row.find( '.smc-typo-style' ).val() );
+			}
+			$( '.smc-typo-row' ).each( function () { typoRow( $( this ) ); } );
+			$( '.smc-typo-style' ).on( 'change', function () { typoRow( $( this ).closest( 'tr' ) ); } );
+
+			// Color choices: hex box only for Custom; swatch for globals.
+			function colorChoice( box ) {
+				var sel = box.find( '.smc-color-g' ), v = sel.val(), hex = box.find( '.smc-color-hex' ), sw = box.find( '.smc-color-swatch' );
+				hex.toggle( 'custom' === v );
+				var c = 'custom' === v ? hex.val() : sel.find( ':selected' ).data( 'color' );
+				sw.css( 'background', c || 'transparent' ).toggle( !! c );
+			}
+			$( '.smc-color-choice' ).each( function () { colorChoice( $( this ) ); } );
+			$( document ).on( 'change input', '.smc-color-g, .smc-color-hex', function () { colorChoice( $( this ).closest( '.smc-color-choice' ) ); preview(); } );
+
+			// Button preview from the fields.
+			function val( name ) {
+				var box = $( '[name="ts[btn][' + name + '][g]"]' ).closest( '.smc-color-choice' ), sel = box.find( 'select' );
+				return 'custom' === sel.val() ? box.find( 'input' ).val() : ( sel.find( ':selected' ).data( 'color' ) || '' );
+			}
+			function sides( v, u ) { return v ? v.trim().split( /[\s,]+/ ).map( function ( n ) { return n + u; } ).join( ' ' ) : ''; }
+			function preview() {
+				var p = $( '.smc-btn-preview' ), row = $( '.smc-typo-row' ).last(), custom = 'custom' === row.find( '.smc-typo-style' ).val();
+				var size = row.find( '[name="ts[button][size][d][n]"]' ).val();
+				p.css( {
+					background: val( 'bg' ) || '#69727d', color: val( 'text' ) || '#fff',
+					borderStyle: $( '[name="ts[btn][border]"]' ).val() || 'none', borderWidth: sides( $( '[name="ts[btn][border_width]"]' ).val(), 'px' ) || 0, borderColor: val( 'border_color' ) || 'transparent',
+					borderRadius: sides( $( '[name="ts[btn][radius][v]"]' ).val(), $( '[name="ts[btn][radius][u]"]' ).val() ) || '3px',
+					padding: sides( $( '[name="ts[btn][padding][d][v]"]' ).val(), $( '[name="ts[btn][padding][d][u]"]' ).val() ) || '12px 24px',
+					fontFamily: custom && row.find( '.smc-font-in' ).val() ? "'" + row.find( '.smc-font-in' ).val() + "', sans-serif" : '',
+					fontWeight: custom ? row.find( '[name="ts[button][weight]"]' ).val() : '',
+					fontSize: custom && size ? size + row.find( '[name="ts[button][size][d][u]"]' ).val() : '',
+					textTransform: custom ? row.find( '[name="ts[button][case]"]' ).val() : ''
+				} );
+				p.data( 'hover', { background: val( 'hover_bg' ), color: val( 'hover_text' ), borderColor: val( 'hover_border' ) } );
+			}
+			$( '.smc-btn-preview' ).on( 'mouseenter', function () {
+				var h = $( this ).data( 'hover' ) || {}, css = {};
+				$.each( h, function ( k, v ) { if ( v ) { css[ k ] = v; } } );
+				$( this ).data( 'base', $( this ).attr( 'style' ) ).css( css );
+			} ).on( 'mouseleave', function () { $( this ).attr( 'style', $( this ).data( 'base' ) || '' ); } );
+			$( '.smc-buttons, .smc-typo' ).on( 'change input', 'input, select', preview );
+			preview();
+
 			// Live font preview (Google Fonts load on demand).
 			$( '.smc-font, .smc-fonts select' ).on( 'change input', function () {
 				var row = $( this ).closest( 'tr' ), fam = row.find( '.smc-font' ).val(), w = row.find( 'select' ).val() || '400';
@@ -540,11 +813,122 @@ class SMC_Location_Brand {
 		<?php
 	}
 
+	/** Color: not set, a global color (stays linked), or a custom hex. */
+	private static function color_input( $name, $key, array $ts, array $colors ) {
+		$gid = self::global_id( $ts['globals'][ $key ] ?? '' );
+		$hex = '' === $gid ? (string) ( $ts['values'][ $key ] ?? '' ) : '';
+		$sel = '' !== $gid ? $gid : ( '' !== $hex ? 'custom' : '' );
+		$out = '<span class="smc-color-choice"><select name="' . esc_attr( $name ) . '[g]" class="smc-color-g"><option value="">Default</option>';
+		foreach ( $colors as $c ) {
+			$out .= '<option value="' . esc_attr( $c['_id'] ) . '" ' . selected( $sel, $c['_id'], false ) . ' data-color="' . esc_attr( $c['color'] ?? '' ) . '">' . esc_html( $c['title'] ) . '</option>';
+		}
+		$out .= '<option value="custom" ' . selected( $sel, 'custom', false ) . '>Custom&hellip;</option></select>';
+		$out .= '<span class="smc-color-swatch"></span>';
+		$out .= '<input name="' . esc_attr( $name ) . '[hex]" value="' . esc_attr( $hex ) . '" class="smc-color-hex code" placeholder="#1A73E8" size="9"></span>';
+		return $out;
+	}
+
+	private static function unit_select( $name, $current, $units ) {
+		if ( '' !== (string) $current && ! in_array( $current, $units, true ) ) {
+			$units[] = $current; // Keep a unit set in Elementor (vw, custom...) instead of switching it.
+		}
+		$out = '<select name="' . esc_attr( $name ) . '" class="smc-unit">';
+		foreach ( $units as $u ) {
+			$out .= '<option ' . selected( $current, $u, false ) . '>' . esc_html( $u ) . '</option>';
+		}
+		return $out . '</select>';
+	}
+
+	private function render_theme_style( array $b ) {
+		$ts     = $b['theme_style'];
+		$v      = $ts['values'];
+		$colors = array_merge( $b['system_colors'], $b['custom_colors'] );
+		$fonts  = array_merge( $b['system_typography'], $b['custom_typography'] );
+		?>
+		<h2>Typography</h2>
+		<p class="description">Elementor's default text and heading styles (Site Settings &gt; Typography). Widgets that set their own font, size or color keep theirs. <strong>Global</strong> links an element to one of the fonts above, like picking it in Elementor; <strong>Custom</strong> sets it here. Leave sizes blank to keep the theme's. Tablet and mobile sizes fall back to the size above them.</p>
+		<div class="smc-scroll"><table class="widefat striped smc-typo">
+			<thead><tr><th>Element</th><th>Style</th><th>Font</th><th>Weight</th><th>Size: desktop / tablet / mobile</th><th>Line height</th><th>Case</th><th>Color</th></tr></thead>
+			<tbody>
+			<?php foreach ( self::TYPO as $pf => $label ) : ?>
+				<?php
+				$t      = "{$pf}_typography";
+				$gid    = self::global_id( $ts['globals'][ "{$t}_typography" ] ?? '' );
+				$custom = 'custom' === ( $v[ "{$t}_typography" ] ?? '' );
+				$style  = '' !== $gid ? "global:$gid" : ( $custom ? 'custom' : '' );
+				$n      = "ts[$pf]";
+				?>
+				<tr class="smc-typo-row">
+					<th scope="row"><?php echo esc_html( $label ); ?></th>
+					<td><select name="<?php echo esc_attr( $n ); ?>[style]" class="smc-typo-style">
+						<option value="">Default</option>
+						<?php foreach ( $fonts as $f ) : ?>
+							<option value="global:<?php echo esc_attr( $f['_id'] ); ?>" <?php selected( $style, 'global:' . $f['_id'] ); ?>>Global: <?php echo esc_html( ( $f['title'] ?? $f['_id'] ) . ( ! empty( $f['typography_font_family'] ) ? ' (' . $f['typography_font_family'] . ')' : '' ) ); ?></option>
+						<?php endforeach; ?>
+						<option value="custom" <?php selected( $style, 'custom' ); ?>>Custom</option>
+					</select></td>
+					<td class="smc-c"><input name="<?php echo esc_attr( $n ); ?>[family]" value="<?php echo esc_attr( $v[ "{$t}_font_family" ] ?? '' ); ?>" list="smc-fonts" class="smc-font-in" placeholder="Default" size="14"></td>
+					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[weight]">
+						<?php foreach ( self::WEIGHTS as $k => $wl ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v[ "{$t}_font_weight" ] ?? '' ), (string) $k ); ?>><?php echo esc_html( $wl ); ?></option>
+						<?php endforeach; ?>
+					</select></td>
+					<td class="smc-c smc-nowrap">
+						<?php foreach ( array_keys( self::DEVICES ) as $d ) : ?>
+							<?php $sz = $v[ "{$t}_font_size$d" ] ?? []; ?>
+							<span class="smc-size" title="<?php echo esc_attr( self::DEVICES[ $d ] ); ?>"><input type="text" inputmode="decimal" name="<?php echo esc_attr( $n ); ?>[size][<?php echo esc_attr( $d ?: 'd' ); ?>][n]" value="<?php echo esc_attr( $sz['size'] ?? '' ); ?>" placeholder="<?php echo esc_attr( substr( self::DEVICES[ $d ], 0, 1 ) ); ?>"><?php echo self::unit_select( "{$n}[size][" . ( $d ?: 'd' ) . '][u]', $sz['unit'] ?? 'px', self::SIZE_UNITS ); // phpcs:ignore WordPress.Security.EscapeOutput ?></span>
+						<?php endforeach; ?>
+					</td>
+					<td class="smc-c smc-nowrap"><?php $lh = $v[ "{$t}_line_height" ] ?? []; ?><input type="text" inputmode="decimal" name="<?php echo esc_attr( $n ); ?>[lh][n]" value="<?php echo esc_attr( $lh['size'] ?? '' ); ?>"><?php echo self::unit_select( "{$n}[lh][u]", $lh['unit'] ?? 'em', [ 'em', 'px' ] ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[case]">
+						<?php foreach ( self::CASES as $k => $cl ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v[ "{$t}_text_transform" ] ?? '' ), (string) $k ); ?>><?php echo esc_html( $cl ); ?></option>
+						<?php endforeach; ?>
+					</select></td>
+					<td><?php echo 'button' === $pf ? '<span class="description">Under Buttons</span>' : self::color_input( "{$n}[color]", self::color_key( $pf ), $ts, $colors ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table></div>
+		<table class="form-table" role="presentation">
+			<tr><th scope="row">Link color</th><td><?php echo self::color_input( 'ts[link][color]', 'link_normal_color', $ts, $colors ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+			<tr><th scope="row">Link hover color</th><td><?php echo self::color_input( 'ts[link][hover]', 'link_hover_color', $ts, $colors ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+		</table>
+
+		<h2>Buttons</h2>
+		<p class="description">The default look of Elementor Button widgets (Site Settings &gt; Buttons), including <code>[location_team]</code> and <code>[location_list]</code> buttons. The font is set in the Buttons row above. Buttons with their own style in a widget keep it.</p>
+		<?php $b_ = (array) ( $v['button_border_radius'] ?? [] ); ?>
+		<table class="form-table smc-buttons" role="presentation">
+			<tr><th scope="row">Background</th><td><?php echo self::color_input( 'ts[btn][bg]', 'button_background_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_bg]', 'button_hover_background_color', $ts, $colors ); // phpcs:ignore ?></td></tr>
+			<tr><th scope="row">Text color</th><td><?php echo self::color_input( 'ts[btn][text]', 'button_text_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_text]', 'button_hover_text_color', $ts, $colors ); // phpcs:ignore ?></td></tr>
+			<tr><th scope="row">Border</th><td>
+				<select name="ts[btn][border]">
+					<?php foreach ( self::BORDERS as $k => $bl ) : ?>
+						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v['button_border_border'] ?? '' ), (string) $k ); ?>><?php echo esc_html( $bl ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<input name="ts[btn][border_width]" value="<?php echo esc_attr( self::dims_text( $v['button_border_width'] ?? [] ) ); ?>" class="small-text code" placeholder="1"> px
+				<?php echo self::color_input( 'ts[btn][border_color]', 'button_border_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_border]', 'button_hover_border_color', $ts, $colors ); // phpcs:ignore ?>
+			</td></tr>
+			<tr><th scope="row">Corner radius</th><td><input name="ts[btn][radius][v]" value="<?php echo esc_attr( self::dims_text( $b_ ) ); ?>" class="small-text code" placeholder="6"><?php echo self::unit_select( 'ts[btn][radius][u]', $b_['unit'] ?? 'px', [ 'px', '%', 'em', 'rem' ] ); // phpcs:ignore ?>
+				<p class="description">One number for all corners, or four for top-left, top-right, bottom-right, bottom-left. Use a large number like 50 for pill-shaped buttons.</p></td></tr>
+			<tr><th scope="row">Padding</th><td>
+				<?php foreach ( array_keys( self::DEVICES ) as $d ) : ?>
+					<?php $pd = (array) ( $v[ "button_padding$d" ] ?? [] ); ?>
+					<label class="smc-pad"><?php echo esc_html( self::DEVICES[ $d ] ); ?> <input name="ts[btn][padding][<?php echo esc_attr( $d ?: 'd' ); ?>][v]" value="<?php echo esc_attr( self::dims_text( $pd ) ); ?>" class="code" size="10" placeholder="<?php echo '' === $d ? '14 28' : ''; ?>"><?php echo self::unit_select( "ts[btn][padding][" . ( $d ?: 'd' ) . '][u]', $pd['unit'] ?? 'px', [ 'px', 'em', 'rem' ] ); // phpcs:ignore ?></label>
+				<?php endforeach; ?>
+				<p class="description">Like CSS: <code>14 28</code> is 14 top and bottom, 28 left and right. Tablet and mobile fall back to the size above them.</p>
+			</td></tr>
+			<tr><th scope="row">Preview</th><td><a href="#" class="smc-btn-preview" onclick="return false">Book an Appointment</a> <span class="description">Approximate; the site's own button may differ slightly.</span></td></tr>
+		</table>
+		<?php
+	}
+
 	private function render_history() {
 		$h = (array) get_option( self::HISTORY, [] );
 		echo '<hr><h2>Restore</h2>';
 		if ( ! $h ) {
-			echo '<p class="description">Each time you save, the previous logo, favicon, colors and fonts are kept here (the last 10) so you can go back.</p>';
+			echo '<p class="description">Each time you save, the previous logo, favicon, colors, fonts, typography and buttons are kept here (the last 10) so you can go back. Versions saved before typography and buttons were added here restore only the logo, favicon, colors and fonts.</p>';
 			return;
 		}
 		echo '<table class="widefat striped" style="max-width:900px"><thead><tr><th>Saved over on</th><th>By</th><th>Colors</th><th></th></tr></thead><tbody>';
@@ -557,7 +941,7 @@ class SMC_Location_Brand {
 				}
 			}
 			echo '<tr><td>' . esc_html( wp_date( 'M j, Y g:i a', $snap['time'] ) ) . '</td><td>' . esc_html( $user ? $user->display_name : '-' ) . '</td><td>' . $swatch . '</td><td>'; // phpcs:ignore WordPress.Security.EscapeOutput
-			echo '<form method="post" onsubmit="return confirm(\'Restore this version of the logo, favicon, colors and fonts?\');">';
+			echo '<form method="post" onsubmit="return confirm(\'Restore this version of the brand settings?\');">';
 			wp_nonce_field( 'smc_brand_restore' );
 			echo '<input type="hidden" name="smc_action" value="restore"><input type="hidden" name="index" value="' . (int) $i . '"><button class="button">Restore</button></form></td></tr>';
 		}
