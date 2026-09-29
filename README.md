@@ -251,6 +251,10 @@ On Corporate pages (the main location on the site's homepage) and pages with no 
 
 New locations start with no reviews; they're never copied from another location. Deleting a location trashes the reviews that belong only to it.
 
+**Bulk editing:** on **Locations > Reviews**, **Quick Edit** now has **Rating** and **Source**. To change many at once, tick them, choose **Edit** under Bulk actions and set Rating and/or Source (leave either on "No change").
+
+**CSV template:** **Import Reviews > Download CSV template** gives a file with every column and two example rows using the site's own location slugs. Delete the examples, fill it in (Excel, Numbers or Google Sheets), save as CSV and import it.
+
 ## Brand
 
 **Locations > Brand** sets the site's logo, favicon, colors, fonts, text styles and buttons on one screen. It edits Elementor's own **Site Settings**, not a separate copy, so the two always match, and every widget set to a global color or font updates site-wide.

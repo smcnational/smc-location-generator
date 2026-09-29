@@ -43,6 +43,10 @@ class SMC_Location_Reviews {
 			add_action( 'manage_' . self::TYPE . '_posts_custom_column', [ __CLASS__, 'column' ], 10, 2 );
 			add_action( 'restrict_manage_posts', [ __CLASS__, 'location_filter' ] );
 			add_action( 'pre_get_posts', [ __CLASS__, 'apply_location_filter' ] );
+			add_action( 'quick_edit_custom_box', [ __CLASS__, 'quick_edit_box' ], 10, 2 );
+			add_action( 'bulk_edit_custom_box', [ __CLASS__, 'bulk_edit_box' ], 10, 2 );
+			add_action( 'save_post_' . self::TYPE, [ __CLASS__, 'save_quick_edit' ], 20, 1 );
+			add_action( 'admin_footer-edit.php', [ __CLASS__, 'quick_edit_script' ] );
 		}
 	}
 
@@ -219,7 +223,10 @@ class SMC_Location_Reviews {
 
 	public static function column( $col, $post_id ) {
 		if ( 'smc_rating' === $col ) {
-			echo '<span style="color:#f5a623;letter-spacing:1px">' . esc_html( self::stars( (int) get_post_meta( $post_id, 'rating', true ) ) ) . '</span>';
+			$r = (int) get_post_meta( $post_id, 'rating', true );
+			echo '<span style="color:#f5a623;letter-spacing:1px">' . esc_html( self::stars( $r ) ) . '</span>';
+			// Current values for Quick Edit to fill in.
+			printf( '<span class="smc-qe" hidden data-rating="%d" data-source="%s"></span>', (int) $r, esc_attr( (string) get_post_meta( $post_id, 'source', true ) ) );
 		} elseif ( 'smc_text' === $col ) {
 			echo esc_html( wp_trim_words( wp_strip_all_tags( get_post_field( 'post_content', $post_id ) ), 20 ) );
 		} elseif ( 'smc_loc' === $col ) {
@@ -236,6 +243,100 @@ class SMC_Location_Reviews {
 		} elseif ( 'smc_source' === $col ) {
 			echo esc_html( (string) get_post_meta( $post_id, 'source', true ) ?: '-' );
 		}
+	}
+
+	/* ========== Quick Edit and Bulk Edit ========== */
+
+	public static function quick_edit_box( $col, $post_type ) {
+		if ( self::TYPE !== $post_type || 'smc_rating' !== $col ) {
+			return;
+		}
+		self::edit_fields( false );
+	}
+
+	public static function bulk_edit_box( $col, $post_type ) {
+		if ( self::TYPE !== $post_type || 'smc_rating' !== $col ) {
+			return;
+		}
+		self::edit_fields( true );
+	}
+
+	/** Rating and Source for Quick Edit, or for Bulk Edit with a "No change" option. */
+	private static function edit_fields( $bulk ) {
+		wp_nonce_field( 'smc_review_quick', 'smc_review_quick_nonce' );
+		?>
+		<fieldset class="inline-edit-col-right smc-review-qe">
+			<div class="inline-edit-col">
+				<label class="inline-edit-group">
+					<span class="title">Rating</span>
+					<select name="smc_rating">
+						<?php if ( $bulk ) : ?><option value="">&mdash; No change &mdash;</option><?php endif; ?>
+						<?php for ( $i = 5; $i >= 1; $i-- ) : ?>
+							<option value="<?php echo (int) $i; ?>"><?php echo esc_html( $i . ' ' . self::stars( $i ) ); ?></option>
+						<?php endfor; ?>
+					</select>
+				</label>
+				<label class="inline-edit-group">
+					<span class="title">Source</span>
+					<select name="smc_source">
+						<option value="<?php echo $bulk ? '' : '-'; ?>"><?php echo $bulk ? '&mdash; No change &mdash;' : '&mdash; None &mdash;'; ?></option>
+						<?php if ( $bulk ) : ?><option value="-">&mdash; None &mdash;</option><?php endif; ?>
+						<?php foreach ( self::SOURCES as $src ) : ?>
+							<option value="<?php echo esc_attr( $src ); ?>"><?php echo esc_html( $src ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			</div>
+		</fieldset>
+		<?php
+	}
+
+	/** Saves Rating and Source from Quick Edit or Bulk Edit. Blank means no change (Bulk Edit). */
+	public static function save_quick_edit( $post_id ) {
+		$nonce = sanitize_key( $_REQUEST['smc_review_quick_nonce'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'smc_review_quick' ) || ! current_user_can( 'edit_post', $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+		$rating = (int) ( $_REQUEST['smc_rating'] ?? 0 );
+		if ( $rating >= 1 && $rating <= 5 ) {
+			update_post_meta( $post_id, 'rating', (string) $rating );
+			update_post_meta( $post_id, '_rating', 'field_smc_review_rating' );
+		}
+		$source = sanitize_text_field( wp_unslash( $_REQUEST['smc_source'] ?? '' ) );
+		if ( '-' === $source ) {
+			update_post_meta( $post_id, 'source', '' );
+		} elseif ( in_array( $source, self::SOURCES, true ) ) {
+			update_post_meta( $post_id, 'source', $source );
+			update_post_meta( $post_id, '_source', 'field_smc_review_source' );
+		}
+	}
+
+	/** Fills Quick Edit's Rating and Source with the review's current values. */
+	public static function quick_edit_script() {
+		if ( self::TYPE !== ( get_current_screen()->post_type ?? '' ) ) {
+			return;
+		}
+		?>
+		<script>
+		jQuery( function ( $ ) {
+			if ( ! window.inlineEditPost ) { return; }
+			var edit = inlineEditPost.edit;
+			inlineEditPost.edit = function ( id ) {
+				edit.apply( this, arguments );
+				var postId = 'object' === typeof id ? parseInt( this.getId( id ), 10 ) : parseInt( id, 10 );
+				var data = $( '#post-' + postId + ' .smc-qe' ), row = $( '#edit-' + postId );
+				if ( ! data.length ) { return; }
+				row.find( 'select[name="smc_rating"]' ).val( String( data.data( 'rating' ) || 5 ) );
+				var src = String( data.data( 'source' ) || '' ), sel = row.find( 'select[name="smc_source"]' );
+				if ( src && ! sel.find( 'option' ).filter( function () { return this.value === src; } ).length ) {
+					sel.append( $( '<option>' ).val( src ).text( src ) ); // An older value: keep it unless changed.
+				}
+				sel.val( src || '-' );
+			};
+		} );
+		</script>
+		<style>.smc-review-qe .inline-edit-group select { min-width: 160px; }</style>
+		<?php
 	}
 
 	public static function location_filter( $post_type ) {

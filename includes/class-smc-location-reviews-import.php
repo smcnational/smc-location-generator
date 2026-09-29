@@ -32,6 +32,10 @@ class SMC_Location_Reviews_Import {
 	/* ========== Actions ========== */
 
 	public function handle() {
+		if ( isset( $_GET['template'] ) && current_user_can( self::CAP ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			check_admin_referer( 'smc_reviews_template' );
+			self::send_template();
+		}
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['smc_action'] ) ) {
 			return;
 		}
@@ -57,6 +61,31 @@ class SMC_Location_Reviews_Import {
 			check_admin_referer( 'smc_reviews_widgets' );
 			$this->import_widgets();
 		}
+	}
+
+	/**
+	 * Downloads a CSV template with the right columns and two example rows that use this
+	 * site's own location slugs, so it can be filled in and imported as is (delete the examples).
+	 */
+	private static function send_template() {
+		$locs  = SMC_Location_Manager::locations();
+		$first = $locs[0]->slug ?? 'springfield';
+		$both  = implode( '|', array_filter( [ $locs[0]->slug ?? 'springfield', $locs[1]->slug ?? '' ] ) );
+		$rows  = [
+			[ 'name', 'rating', 'review', 'date', 'source', 'link', 'location' ],
+			[ 'Jane D.', '5', 'Everyone was so friendly and my cleaning was painless.', wp_date( 'Y-m-d' ), 'Google', '', $first ],
+			[ 'Mark R.', '4', 'Great care and easy scheduling. Delete these example rows before importing.', wp_date( 'Y-m-d', strtotime( '-1 month' ) ), 'Facebook', '', $both ],
+		];
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename=reviews-import-template.csv' );
+		$out = fopen( 'php://output', 'w' );
+		fwrite( $out, "\xEF\xBB\xBF" ); // So Excel opens it as UTF-8.
+		foreach ( $rows as $r ) {
+			fputcsv( $out, $r );
+		}
+		fclose( $out );
+		exit;
 	}
 
 	private function import_csv() {
@@ -405,6 +434,8 @@ class SMC_Location_Reviews_Import {
 							<?php endforeach; ?>
 						</select></td></tr>
 				</table>
+				<p><a class="button" href="<?php echo esc_url( wp_nonce_url( add_query_arg( [ 'page' => self::SLUG, 'template' => 1 ], admin_url( 'admin.php' ) ), 'smc_reviews_template' ) ); ?>"><span class="dashicons dashicons-download" style="vertical-align:text-bottom"></span> Download CSV template</a>
+					<span class="description">Opens in Excel, Numbers or Google Sheets. It has every column and two example rows using this site's locations; delete the examples, add your reviews, save as CSV and import it here.</span></p>
 				<p>The first row must be column names. Only <code>review</code> is required; columns can be in any order:</p>
 				<pre style="background:#fff;border:1px solid #dcdcde;padding:10px 14px;max-width:900px;overflow:auto">name,rating,review,date,source,location
 Jane D.,5,"Everyone was so friendly and my cleaning was painless.",2026-08-14,Google,springfield
