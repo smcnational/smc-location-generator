@@ -169,6 +169,19 @@ For example: `Dentist in %%location_city_state%% | %%sitename%%`. They also work
 - You can add or remove redirects by hand on the same screen, or with `wp smc location redirects`, `wp smc location redirects add /oldtown/ /springfield/` and `wp smc location redirects remove /oldtown/`.
 - If the site also runs the Redirection plugin or Yoast Premium redirects, those go first; these catch the rest.
 
+## Locations list
+
+`[location_list]` replaces a store locator plugin on the Our Locations page. It shows every location as a card (name, address, phone, today's hours, and View Location, Directions and Book Online links) next to a map with a pin for each one.
+
+- **Always current:** a location appears as soon as its main page is published (Publish location on the launch checklist) and disappears when it's deleted. Details come from the location, so there's nothing to add or update in a second place.
+- **Map pins** come from each location's Google Map embed, so there's nothing extra to fill in. The map uses OpenStreetMap and needs no API key. Clicking a card shows it on the map and clicking a pin highlights its card.
+- **Search:** typing a location's name, city, street or zip shows the matching locations. Any other city or zip is looked up and the locations are sorted by distance, with miles shown. **Use my location** does the same from the visitor's position.
+- **Today's hours** are worked out in the visitor's browser, so they're right even when the page is cached.
+- **Options:** `map="no"` for cards only (then `columns="1"` to `"4"`, default 3), `search="no"`, `hours="full"` or `"none"`, `button="View Office"`, `directions=""` or `book=""` to hide those links, `state="OH,IN"` to show only some states, `corporate="yes"` to include Corporate.
+- Buttons use the site's Elementor button style and the map pins its primary color.
+
+**Switching a site over:** replace the store locator's shortcode or widget on Our Locations with `[location_list]` in a Shortcode widget, check it, then deactivate the store locator plugin. Once `[location_list]` is on a published page, the launch checklist's store locator item turns green on its own.
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:
@@ -403,7 +416,7 @@ add_filter( 'smc_location_cloner_defaults', function ( $d ) {
 ## After cloning (manual)
 
 - Swap the doctors and team, their photos, and any local landmark images.
-- Add the location to the store locator on the Our Locations page.
+- Add the location to the store locator on the Our Locations page (not needed on sites using `[location_list]`).
 - Update any "X Locations" text, like the homepage title.
 - Create the location's JotForm, if you haven't yet, and set `booking_link`.
 - Write the location's nearby-city pages. These are excluded from the clone on purpose.

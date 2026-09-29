@@ -386,7 +386,7 @@ class SMC_Location_Admin {
 		<h2>Finish by hand</h2>
 		<ul class="ul-disc">
 			<li>Add the new office's doctors and team under Locations &gt; Team (pages using <code>[location_team]</code> or a Team Loop show them automatically), and swap any local landmark photos.</li>
-			<li>Add the location to the store locator on the Our Locations page.</li>
+			<li>Add the location to the store locator on the Our Locations page (not needed if it uses <code>[location_list]</code>).</li>
 			<li>Update any "X Locations" text, like the homepage title.</li>
 			<li>Set up the office's JotForm if the booking link still points to the copied location.</li>
 			<li>Add the Google Map on the location's edit screen if you didn't paste one, and check the hours and social links.</li>

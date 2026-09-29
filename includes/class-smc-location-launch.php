@@ -165,7 +165,7 @@ class SMC_Location_Launch {
 		$locator = self::store_locator( $term );
 		foreach ( self::MANUAL as $key => $label ) {
 			if ( 'store_locator' === $key && null !== $locator ) {
-				$add( 'launch', $key, 'Store locator', $locator['found'] ? 'ok' : 'fail', esc_html( $locator['detail'] ) );
+				$add( 'launch', $key, 'Store locator', ! empty( $locator['warn'] ) ? 'warn' : ( $locator['found'] ? 'ok' : 'fail' ), esc_html( $locator['detail'] ) );
 				continue;
 			}
 			$is      = ! empty( $done[ $key ] );
@@ -290,11 +290,16 @@ class SMC_Location_Launch {
 	}
 
 	/**
-	 * Looks for the location in WP Store Locator or Agile Store Locator.
-	 * Returns null when neither is installed (then it's a manual check).
+	 * Checks the location will show in [location_list], or looks for it in WP Store Locator
+	 * or Agile Store Locator. Returns null when none is used (then it's a manual check).
 	 */
 	private static function store_locator( WP_Term $term ) {
 		global $wpdb;
+		if ( class_exists( 'SMC_Location_List' ) && SMC_Location_List::in_use() ) {
+			return SMC_Location_List::coords( $term->term_id )
+				? [ 'found' => true, 'detail' => 'Listed automatically by [location_list] once published.' ]
+				: [ 'found' => true, 'warn' => true, 'detail' => '[location_list] lists it once published, but it can\'t be pinned on the map: its Google Map embed has no coordinates. Re-copy the embed code from Google Maps (Share > Embed a map).' ];
+		}
 		$street = trim( (string) ( preg_split( '#\s*<br\s*/?>\s*#i', (string) get_term_meta( $term->term_id, 'address', true ) )[0] ?? '' ) );
 		$needles = array_filter( [ $term->name, $street ] );
 
