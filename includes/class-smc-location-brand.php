@@ -709,13 +709,36 @@ class SMC_Location_Brand {
 			.smc-brand .smc-colors, .smc-brand .smc-fonts { max-width: 900px; }
 			.smc-brand .smc-colors td, .smc-brand .smc-fonts td { vertical-align: middle; }
 			.smc-brand .smc-scroll { overflow-x: auto; max-width: 100%; }
-			.smc-brand .smc-typo { min-width: 1100px; }
+			.smc-brand .smc-typo { min-width: 1420px; }
 			.smc-brand .smc-typo td, .smc-brand .smc-typo th { vertical-align: middle; }
-			.smc-brand .smc-typo .smc-size input, .smc-brand .smc-typo input[name$='[lh][n]'] { width: 62px; }
+			.smc-brand .smc-typo, .smc-brand .smc-buttons, .smc-brand .smc-fonts, .smc-brand .smc-colors { --smc-h: 32px; }
+			/* One height for every field, so rows line up. */
+			.smc-brand .smc-typo input, .smc-brand .smc-typo select,
+			.smc-brand .smc-buttons input:not([type=checkbox]), .smc-brand .smc-buttons select,
+			.smc-brand .smc-fonts input, .smc-brand .smc-fonts select,
+			.smc-brand .smc-colors input[type=text], .smc-brand .smc-colors input:not([type]) {
+				height: var(--smc-h); min-height: var(--smc-h); line-height: 1.4; padding-top: 0; padding-bottom: 0; box-sizing: border-box; margin: 2px 0; vertical-align: middle; font-size: 14px;
+			}
+			.smc-brand .smc-typo input, .smc-brand .smc-buttons input:not([type=checkbox]) { padding-left: 8px; padding-right: 8px; }
+			/* Widths by kind of field. */
+			.smc-brand .smc-num { width: 64px; }
+			.smc-brand .smc-unit { width: 64px; }
+			.smc-brand .smc-dims { width: 96px; }
+			.smc-brand .smc-font-in { width: 150px; }
+			.smc-brand .smc-w-style { width: 190px; }
+			.smc-brand .smc-w-md { width: 130px; }
+			.smc-brand .smc-w-sm { width: 120px; }
+			.smc-brand .smc-color-hex { width: 100px; }
+			.smc-brand .smc-fonts .smc-font { width: 260px; }
+			.smc-brand .smc-fonts select { width: 140px; }
+			.smc-brand .smc-colors .regular-text { width: 260px; }
+			.smc-brand .smc-typo input::placeholder { color: #a7aaad; }
+			.smc-brand .smc-unit-label { margin: 0 8px 0 2px; color: #646970; }
+			.smc-brand .smc-buttons td > .smc-color-choice { margin-right: 2px; }
 			.smc-brand .smc-typo tr.is-off .smc-c { opacity: .35; pointer-events: none; }
 			.smc-brand .smc-nowrap { white-space: nowrap; }
 			.smc-brand .smc-size { display: inline-block; margin-right: 6px; }
-			.smc-brand .smc-unit { min-width: 0; padding-right: 20px; }
+			.smc-brand .smc-unit { min-width: 0; padding-right: 22px; margin-left: 2px; }
 			.smc-brand .smc-color-choice { display: inline-flex; align-items: center; gap: 4px; }
 			.smc-brand .smc-color-swatch { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #c3c4c7; display: none; }
 			.smc-brand .smc-sep { margin: 0 6px 0 12px; color: #646970; }
@@ -818,13 +841,13 @@ class SMC_Location_Brand {
 		$gid = self::global_id( $ts['globals'][ $key ] ?? '' );
 		$hex = '' === $gid ? (string) ( $ts['values'][ $key ] ?? '' ) : '';
 		$sel = '' !== $gid ? $gid : ( '' !== $hex ? 'custom' : '' );
-		$out = '<span class="smc-color-choice"><select name="' . esc_attr( $name ) . '[g]" class="smc-color-g"><option value="">Default</option>';
+		$out = '<span class="smc-color-choice"><select name="' . esc_attr( $name ) . '[g]" class="smc-color-g smc-w-sm"><option value="">Default</option>';
 		foreach ( $colors as $c ) {
 			$out .= '<option value="' . esc_attr( $c['_id'] ) . '" ' . selected( $sel, $c['_id'], false ) . ' data-color="' . esc_attr( $c['color'] ?? '' ) . '">' . esc_html( $c['title'] ) . '</option>';
 		}
 		$out .= '<option value="custom" ' . selected( $sel, 'custom', false ) . '>Custom&hellip;</option></select>';
 		$out .= '<span class="smc-color-swatch"></span>';
-		$out .= '<input name="' . esc_attr( $name ) . '[hex]" value="' . esc_attr( $hex ) . '" class="smc-color-hex code" placeholder="#1A73E8" size="9"></span>';
+		$out .= '<input name="' . esc_attr( $name ) . '[hex]" value="' . esc_attr( $hex ) . '" class="smc-color-hex code" placeholder="#1A73E8"></span>';
 		return $out;
 	}
 
@@ -860,15 +883,15 @@ class SMC_Location_Brand {
 				?>
 				<tr class="smc-typo-row">
 					<th scope="row"><?php echo esc_html( $label ); ?></th>
-					<td><select name="<?php echo esc_attr( $n ); ?>[style]" class="smc-typo-style">
+					<td><select name="<?php echo esc_attr( $n ); ?>[style]" class="smc-typo-style smc-w-style">
 						<option value="">Default</option>
 						<?php foreach ( $fonts as $f ) : ?>
 							<option value="global:<?php echo esc_attr( $f['_id'] ); ?>" <?php selected( $style, 'global:' . $f['_id'] ); ?>>Global: <?php echo esc_html( ( $f['title'] ?? $f['_id'] ) . ( ! empty( $f['typography_font_family'] ) ? ' (' . $f['typography_font_family'] . ')' : '' ) ); ?></option>
 						<?php endforeach; ?>
 						<option value="custom" <?php selected( $style, 'custom' ); ?>>Custom</option>
 					</select></td>
-					<td class="smc-c"><input name="<?php echo esc_attr( $n ); ?>[family]" value="<?php echo esc_attr( $v[ "{$t}_font_family" ] ?? '' ); ?>" list="smc-fonts" class="smc-font-in" placeholder="Default" size="14"></td>
-					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[weight]">
+					<td class="smc-c"><input name="<?php echo esc_attr( $n ); ?>[family]" value="<?php echo esc_attr( $v[ "{$t}_font_family" ] ?? '' ); ?>" list="smc-fonts" class="smc-font-in" placeholder="Default"></td>
+					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[weight]" class="smc-w-md">
 						<?php foreach ( self::WEIGHTS as $k => $wl ) : ?>
 							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v[ "{$t}_font_weight" ] ?? '' ), (string) $k ); ?>><?php echo esc_html( $wl ); ?></option>
 						<?php endforeach; ?>
@@ -876,11 +899,11 @@ class SMC_Location_Brand {
 					<td class="smc-c smc-nowrap">
 						<?php foreach ( array_keys( self::DEVICES ) as $d ) : ?>
 							<?php $sz = $v[ "{$t}_font_size$d" ] ?? []; ?>
-							<span class="smc-size" title="<?php echo esc_attr( self::DEVICES[ $d ] ); ?>"><input type="text" inputmode="decimal" name="<?php echo esc_attr( $n ); ?>[size][<?php echo esc_attr( $d ?: 'd' ); ?>][n]" value="<?php echo esc_attr( $sz['size'] ?? '' ); ?>" placeholder="<?php echo esc_attr( substr( self::DEVICES[ $d ], 0, 1 ) ); ?>"><?php echo self::unit_select( "{$n}[size][" . ( $d ?: 'd' ) . '][u]', $sz['unit'] ?? 'px', self::SIZE_UNITS ); // phpcs:ignore WordPress.Security.EscapeOutput ?></span>
+							<span class="smc-size" title="<?php echo esc_attr( self::DEVICES[ $d ] ); ?>"><input type="text" inputmode="decimal" class="smc-num" name="<?php echo esc_attr( $n ); ?>[size][<?php echo esc_attr( $d ?: 'd' ); ?>][n]" value="<?php echo esc_attr( $sz['size'] ?? '' ); ?>" placeholder="<?php echo esc_attr( substr( self::DEVICES[ $d ], 0, 1 ) ); ?>"><?php echo self::unit_select( "{$n}[size][" . ( $d ?: 'd' ) . '][u]', $sz['unit'] ?? 'px', self::SIZE_UNITS ); // phpcs:ignore WordPress.Security.EscapeOutput ?></span>
 						<?php endforeach; ?>
 					</td>
-					<td class="smc-c smc-nowrap"><?php $lh = $v[ "{$t}_line_height" ] ?? []; ?><input type="text" inputmode="decimal" name="<?php echo esc_attr( $n ); ?>[lh][n]" value="<?php echo esc_attr( $lh['size'] ?? '' ); ?>"><?php echo self::unit_select( "{$n}[lh][u]", $lh['unit'] ?? 'em', [ 'em', 'px' ] ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
-					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[case]">
+					<td class="smc-c smc-nowrap"><?php $lh = $v[ "{$t}_line_height" ] ?? []; ?><input type="text" inputmode="decimal" class="smc-num" name="<?php echo esc_attr( $n ); ?>[lh][n]" value="<?php echo esc_attr( $lh['size'] ?? '' ); ?>"><?php echo self::unit_select( "{$n}[lh][u]", $lh['unit'] ?? 'em', [ 'em', 'px' ] ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+					<td class="smc-c"><select name="<?php echo esc_attr( $n ); ?>[case]" class="smc-w-md">
 						<?php foreach ( self::CASES as $k => $cl ) : ?>
 							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v[ "{$t}_text_transform" ] ?? '' ), (string) $k ); ?>><?php echo esc_html( $cl ); ?></option>
 						<?php endforeach; ?>
@@ -902,20 +925,20 @@ class SMC_Location_Brand {
 			<tr><th scope="row">Background</th><td><?php echo self::color_input( 'ts[btn][bg]', 'button_background_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_bg]', 'button_hover_background_color', $ts, $colors ); // phpcs:ignore ?></td></tr>
 			<tr><th scope="row">Text color</th><td><?php echo self::color_input( 'ts[btn][text]', 'button_text_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_text]', 'button_hover_text_color', $ts, $colors ); // phpcs:ignore ?></td></tr>
 			<tr><th scope="row">Border</th><td>
-				<select name="ts[btn][border]">
+				<select name="ts[btn][border]" class="smc-w-sm">
 					<?php foreach ( self::BORDERS as $k => $bl ) : ?>
 						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) ( $v['button_border_border'] ?? '' ), (string) $k ); ?>><?php echo esc_html( $bl ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<input name="ts[btn][border_width]" value="<?php echo esc_attr( self::dims_text( $v['button_border_width'] ?? [] ) ); ?>" class="small-text code" placeholder="1"> px
+				<input name="ts[btn][border_width]" value="<?php echo esc_attr( self::dims_text( $v['button_border_width'] ?? [] ) ); ?>" class="smc-num code" placeholder="1"> <span class="smc-unit-label">px</span>
 				<?php echo self::color_input( 'ts[btn][border_color]', 'button_border_color', $ts, $colors ); // phpcs:ignore ?> <span class="smc-sep">Hover</span> <?php echo self::color_input( 'ts[btn][hover_border]', 'button_hover_border_color', $ts, $colors ); // phpcs:ignore ?>
 			</td></tr>
-			<tr><th scope="row">Corner radius</th><td><input name="ts[btn][radius][v]" value="<?php echo esc_attr( self::dims_text( $b_ ) ); ?>" class="small-text code" placeholder="6"><?php echo self::unit_select( 'ts[btn][radius][u]', $b_['unit'] ?? 'px', [ 'px', '%', 'em', 'rem' ] ); // phpcs:ignore ?>
+			<tr><th scope="row">Corner radius</th><td><input name="ts[btn][radius][v]" value="<?php echo esc_attr( self::dims_text( $b_ ) ); ?>" class="smc-num code" placeholder="6"><?php echo self::unit_select( 'ts[btn][radius][u]', $b_['unit'] ?? 'px', [ 'px', '%', 'em', 'rem' ] ); // phpcs:ignore ?>
 				<p class="description">One number for all corners, or four for top-left, top-right, bottom-right, bottom-left. Use a large number like 50 for pill-shaped buttons.</p></td></tr>
 			<tr><th scope="row">Padding</th><td>
 				<?php foreach ( array_keys( self::DEVICES ) as $d ) : ?>
 					<?php $pd = (array) ( $v[ "button_padding$d" ] ?? [] ); ?>
-					<label class="smc-pad"><?php echo esc_html( self::DEVICES[ $d ] ); ?> <input name="ts[btn][padding][<?php echo esc_attr( $d ?: 'd' ); ?>][v]" value="<?php echo esc_attr( self::dims_text( $pd ) ); ?>" class="code" size="10" placeholder="<?php echo '' === $d ? '14 28' : ''; ?>"><?php echo self::unit_select( "ts[btn][padding][" . ( $d ?: 'd' ) . '][u]', $pd['unit'] ?? 'px', [ 'px', 'em', 'rem' ] ); // phpcs:ignore ?></label>
+					<label class="smc-pad"><?php echo esc_html( self::DEVICES[ $d ] ); ?> <input name="ts[btn][padding][<?php echo esc_attr( $d ?: 'd' ); ?>][v]" value="<?php echo esc_attr( self::dims_text( $pd ) ); ?>" class="smc-dims code" placeholder="<?php echo '' === $d ? '14 28' : ''; ?>"><?php echo self::unit_select( "ts[btn][padding][" . ( $d ?: 'd' ) . '][u]', $pd['unit'] ?? 'px', [ 'px', 'em', 'rem' ] ); // phpcs:ignore ?></label>
 				<?php endforeach; ?>
 				<p class="description">Like CSS: <code>14 28</code> is 14 top and bottom, 28 left and right. Tablet and mobile fall back to the size above them.</p>
 			</td></tr>
