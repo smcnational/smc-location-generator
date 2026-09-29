@@ -48,6 +48,17 @@ class SMC_Location_Brand {
 				if ( ! shortcode_exists( 'brand_logo' ) ) {
 					add_shortcode( 'brand_logo', [ __CLASS__, 'logo_shortcode' ] );
 				}
+				// [site_name]: Settings > General > Site Title.
+				if ( ! shortcode_exists( 'site_name' ) ) {
+					add_shortcode( 'site_name', fn() => esc_html( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ) );
+				}
+				// [brand_name]: the organization name in Yoast SEO (the name the schema uses), or the Site Title.
+				if ( ! shortcode_exists( 'brand_name' ) ) {
+					add_shortcode(
+						'brand_name',
+						fn() => esc_html( class_exists( 'SMC_Location_Schema' ) ? SMC_Location_Schema::brand() : html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )
+					);
+				}
 			},
 			20
 		);

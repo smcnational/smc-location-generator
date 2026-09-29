@@ -282,6 +282,8 @@ New locations start with no reviews; they're never copied from another location.
 - These are Elementor's settings. Astra's own buttons and headings (Customizer) aren't changed.
 - **Restore:** every save keeps the previous version of all of the above (the last 10 saves), each with color swatches. **Restore** puts one back. Versions saved before typography and buttons were added restore only the logo, favicon, colors and fonts.
 
+**Name shortcodes:** `[site_name]` is the Site Title (Settings > General). `[brand_name]` is the organization name set in Yoast SEO (the name the schema uses), or the Site Title if there isn't one. Both work inside a sentence in a Text Editor widget: `Welcome to [site_name], serving families since 1998.` In a Heading widget, use the **Shortcode** dynamic tag.
+
 ## Export / Import
 
 **Locations > Export / Import** moves a site's location data to another site in one file: staging to live, or into a new client site built from the starter template.
