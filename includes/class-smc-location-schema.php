@@ -254,7 +254,7 @@ class SMC_Location_Schema {
 		$by  = [];
 		$bad = [];
 		foreach ( self::DAYS as $d => $label ) {
-			$raw = trim( (string) get_term_meta( $tid, "hours_$d", true ) );
+			$raw = self::clean( (string) get_term_meta( $tid, "hours_$d", true ) );
 			if ( '' === $raw || preg_match( '/^(closed|none)$/i', $raw ) ) {
 				continue;
 			}
@@ -275,8 +275,22 @@ class SMC_Location_Schema {
 		return [ 'specs' => $specs, 'unreadable' => $bad ];
 	}
 
+	/**
+	 * Hours text without what doesn't change the times: footnote marks ("9 AM - 2 PM*", used
+	 * with the hours note), notes in brackets ("(admin only)"), non-breaking and other odd
+	 * spaces, and <br> or other tags.
+	 */
+	public static function clean( $raw ) {
+		$raw = html_entity_decode( wp_strip_all_tags( preg_replace( '#<br\s*/?>#i', ', ', (string) $raw ) ), ENT_QUOTES, 'UTF-8' );
+		$raw = preg_replace( '/[\x{00A0}\x{2000}-\x{200B}\x{202F}\x{205F}\x{3000}\x{FEFF}]/u', ' ', $raw );
+		$raw = preg_replace( '/\([^)]*\)|\[[^\]]*\]/', ' ', $raw );
+		$raw = str_replace( [ '*', '†', '‡' ], '', $raw );
+		return trim( preg_replace( '/\s+/', ' ', $raw ) );
+	}
+
 	/** "8 AM - 12 PM, 1 PM - 5 PM" -> [ [ "08:00", "12:00" ], [ "13:00", "17:00" ] ], or [] if unreadable. */
 	public static function parse_ranges( $raw ) {
+		$raw = self::clean( $raw );
 		$raw = str_replace( [ '–', '—', '&ndash;', '&mdash;', ' to ' ], '-', strtolower( html_entity_decode( $raw ) ) );
 		$raw = str_replace( [ 'a.m.', 'p.m.', 'noon' ], [ 'am', 'pm', '12pm' ], $raw );
 		$out = [];
