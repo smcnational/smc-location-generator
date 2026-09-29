@@ -25,8 +25,8 @@ class SMC_Location_Core {
 	const BASE_FIELDS = [
 		'city_state'      => [ 'field_64d395506a948', 'City and state', 'text', 'e.g. Springfield, ST' ],
 		'address'         => [ 'field_64d395776a949', 'Address', 'text', 'Street, then <br>, then city, state and zip. e.g. 123 Main St<br>Springfield, ST 12345' ],
-		'phone_label'     => [ 'field_64d395936a94a', 'Phone', 'text', 'As it should appear, e.g. 419-848-0722' ],
-		'phone_link'      => [ 'field_64d395ea6a94b', 'Phone link', 'text', 'e.g. tel:419-848-0722 (the Edit screen under Locations fills this in from the phone automatically)' ],
+		'phone_label'     => [ 'field_64d395936a94a', 'Phone', 'text', 'As it should appear, e.g. 555-555-0100' ],
+		'phone_link'      => [ 'field_64d395ea6a94b', 'Phone link', 'text', 'e.g. tel:555-555-0100 (the Edit screen under Locations fills this in from the phone automatically)' ],
 		'booking_label'   => [ 'field_64d3964b53614', 'Booking button text', 'text', 'e.g. Book Appointment' ],
 		'booking_link'    => [ 'field_64d3965753615', 'Booking link', 'text', 'The booking form URL, e.g. https://form.jotform.com/...' ],
 		'booking_classes' => [ 'field_64d3966f53616', 'Booking button CSS classes', 'text', 'Usually jotformButton, which opens the JotForm popup' ],
@@ -182,7 +182,7 @@ class SMC_Location_Core {
 	}
 
 	/**
-	 * [current_slug] - the page's location path for building links, e.g. "/kenton/".
+	 * [current_slug] - the page's location path for building links, e.g. "/springfield/".
 	 * "/" on single-location sites (front page not in Corporate), on Corporate pages and
 	 * on the front page. Same behavior as SMC's original snippet.
 	 */

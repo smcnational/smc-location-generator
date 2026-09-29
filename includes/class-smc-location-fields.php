@@ -10,7 +10,7 @@
  *   [location_map]                   Google Maps iframe; height is set in Locations > Settings
  *   [location_social]                list of social links
  *
- * Every shortcode takes location="kenton" to show a specific location instead
+ * Every shortcode takes location="springfield" to show a specific location instead
  * (useful on corporate or "Our Locations" pages). Single values also work with
  * the existing shortcode, e.g. [location field="hours_monday"] or
  * [location field="facebook_url"] for a button or icon link.
@@ -108,7 +108,7 @@ class SMC_Location_Fields {
 	 * [location field="address"] output.
 	 *
 	 * format="lines"  always two lines
-	 * format="inline" always one line: "965 E Columbus St, Kenton, OH 43326"
+	 * format="inline" always one line: "123 Main St, Springfield, ST 12345"
 	 * (default)       decided by address_context(): two lines when the address is on its
 	 *                 own, one line when it sits in a paragraph with other text.
 	 */
@@ -732,9 +732,9 @@ class SMC_Location_Fields {
 	}
 
 	/**
-	 * [location_url] - link to the current location's main page, e.g. https://site.com/kenton/.
+	 * [location_url] - link to the current location's main page, e.g. https://site.com/springfield/.
 	 * On pages with no location (or Corporate), the homepage. Good for the Site Logo link.
-	 *   path="services/"   a page under the location, e.g. /kenton/services/
+	 *   path="services/"   a page under the location, e.g. /springfield/services/
 	 */
 	public static function url( $atts ) {
 		$atts = shortcode_atts( [ 'location' => '', 'path' => '' ], $atts, 'location_url' );

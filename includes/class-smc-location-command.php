@@ -5,10 +5,10 @@
  * Typical flow:
  *
  *     wp smc location sources
- *     wp smc location init kenton Marion
- *     nano marion.json
- *     wp smc location clone marion.json
- *     wp smc location undo marion        # if you need to back it out
+ *     wp smc location init springfield Shelbyville
+ *     nano shelbyville.json
+ *     wp smc location clone shelbyville.json
+ *     wp smc location undo shelbyville        # if you need to back it out
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -62,7 +62,7 @@ class SMC_Location_Command {
 	 * : Slug of the location to clone, from `wp smc location sources`.
 	 *
 	 * <city>
-	 * : The new location's city, e.g. "Marion".
+	 * : The new location's city, e.g. "Shelbyville".
 	 *
 	 * [--file=<path>]
 	 * : Where to write the config. Defaults to <city-slug>.json in the current folder.
@@ -72,7 +72,7 @@ class SMC_Location_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp smc location init kenton Marion
+	 *     wp smc location init springfield Shelbyville
 	 */
 	public function init( $args, $assoc ) {
 		list( $source, $city ) = $args;
@@ -136,8 +136,8 @@ class SMC_Location_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp smc location clone marion.json --dry-run
-	 *     wp smc location clone marion.json
+	 *     wp smc location clone shelbyville.json --dry-run
+	 *     wp smc location clone shelbyville.json
 	 *
 	 * @subcommand clone
 	 */
@@ -209,7 +209,7 @@ class SMC_Location_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp smc location undo marion
+	 *     wp smc location undo shelbyville
 	 */
 	public function undo( $args, $assoc ) {
 		$slug = $args[0];
@@ -287,14 +287,14 @@ class SMC_Location_Command {
 	 * ## OPTIONS
 	 *
 	 * <slug>
-	 * : The location's slug, e.g. kenton.
+	 * : The location's slug, e.g. springfield.
 	 *
 	 * [--format=<format>]
 	 * : table, csv or json. Default table.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp smc location checklist kenton
+	 *     wp smc location checklist springfield
 	 */
 	public function checklist( $args, $assoc ) {
 		$term = $this->launch_term( $args[0] );
@@ -324,14 +324,14 @@ class SMC_Location_Command {
 	 * ## OPTIONS
 	 *
 	 * <slug>
-	 * : The location's slug, e.g. kenton.
+	 * : The location's slug, e.g. springfield.
 	 *
 	 * [--yes]
 	 * : Don't ask for confirmation.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp smc location publish kenton
+	 *     wp smc location publish springfield
 	 */
 	public function publish( $args, $assoc ) {
 		$term = $this->launch_term( $args[0] );
@@ -410,10 +410,10 @@ class SMC_Location_Command {
 	 * : list (default), add or remove.
 	 *
 	 * [<from>]
-	 * : Old path, e.g. /kenton/
+	 * : Old path, e.g. /oldtown/
 	 *
 	 * [<to>]
-	 * : New path, e.g. /lima/ or / for the homepage (add only).
+	 * : New path, e.g. /springfield/ or / for the homepage (add only).
 	 *
 	 * [--no-same]
 	 * : Send every page under <from> to <to> itself, instead of the same page at the new address.
@@ -421,8 +421,8 @@ class SMC_Location_Command {
 	 * ## EXAMPLES
 	 *
 	 *     wp smc location redirects
-	 *     wp smc location redirects add /kenton/ /lima/
-	 *     wp smc location redirects remove /kenton/
+	 *     wp smc location redirects add /oldtown/ /springfield/
+	 *     wp smc location redirects remove /oldtown/
 	 */
 	public function redirects( $args, $assoc ) {
 		$action = $args[0] ?? 'list';
@@ -521,7 +521,7 @@ class SMC_Location_Command {
 	 * ## EXAMPLES
 	 *
 	 *     wp smc location export
-	 *     wp smc location export --sections=locations,reviews --file=kenton.json
+	 *     wp smc location export --sections=locations,reviews --file=springfield.json
 	 */
 	public function export( $args, $assoc ) {
 		$sections = isset( $assoc['sections'] ) ? array_map( 'trim', explode( ',', $assoc['sections'] ) ) : SMC_Location_Transfer::SECTIONS;

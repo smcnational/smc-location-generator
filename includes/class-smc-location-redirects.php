@@ -2,9 +2,9 @@
 /**
  * 301 redirects for deleted and moved location pages.
  *
- * A redirect covers a whole section of the site: /kenton/ and everything under it. With
- * "same page" on, /kenton/services/implants/ goes to /lima/services/implants/ when that page
- * exists, otherwise to the closest page above it, and finally /lima/. Query strings are kept.
+ * A redirect covers a whole section of the site: /oldtown/ and everything under it. With
+ * "same page" on, /oldtown/services/implants/ goes to /springfield/services/implants/ when that page
+ * exists, otherwise to the closest page above it, and finally /springfield/. Query strings are kept.
  *
  * Redirects only kick in when the URL would otherwise be a 404, so a real page at the same
  * address always wins (e.g. if a location is added back later).
@@ -37,13 +37,13 @@ class SMC_Location_Redirects {
 
 	/* ========== Storage ========== */
 
-	/** @return array from => [ to, same, reason, created ] with paths like "/kenton" and "/" for the homepage. */
+	/** @return array from => [ to, same, reason, created ] with paths like "/springfield" and "/" for the homepage. */
 	public static function all() {
 		$r = get_option( self::OPTION, [] );
 		return is_array( $r ) ? $r : [];
 	}
 
-	/** "/Kenton/services/" or a full URL on this site -> "/kenton/services". "" if it's not a path on this site. */
+	/** "/Springfield/services/" or a full URL on this site -> "/springfield/services". "" if it's not a path on this site. */
 	public static function normalize( $path ) {
 		$path = trim( (string) $path );
 		if ( preg_match( '#^https?://#i', $path ) ) {
@@ -69,7 +69,7 @@ class SMC_Location_Redirects {
 			return false;
 		}
 		$all = self::all();
-		unset( $all[ $to ] ); // Moving back: /lima was redirected to /kenton, now /kenton goes to /lima.
+		unset( $all[ $to ] ); // Moving back: /springfield was redirected to /oldtown, now /oldtown goes to /springfield.
 		foreach ( $all as $f => $r ) {
 			if ( $r['to'] === $from || 0 === strpos( $r['to'], $from . '/' ) ) {
 				$all[ $f ]['to'] = $to . substr( $r['to'], strlen( $from ) );
@@ -274,7 +274,7 @@ class SMC_Location_Redirects {
 		$msgs = [
 			'added'   => [ 'success', 'Redirect saved.' ],
 			'removed' => [ 'success', 'Redirect removed.' ],
-			'invalid' => [ 'error', 'Enter two different paths on this site, e.g. /kenton/ and /lima/. The homepage can\'t be redirected.' ],
+			'invalid' => [ 'error', 'Enter two different paths on this site, e.g. /oldtown/ and /springfield/. The homepage can\'t be redirected.' ],
 		];
 		?>
 		<div class="wrap">

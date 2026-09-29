@@ -9,7 +9,7 @@
  *   [location_team type="doctors"]    the page location's doctors
  *   [location_team type="team"]       everyone else on the team
  *   [location_team]                   everyone
- *   Options: columns="3" bio="short|full|none" words="40" location="kenton" (or "all")
+ *   Options: columns="3" bio="short|full|none" words="40" location="springfield" (or "all")
  *
  * Or design them in Elementor: a Loop Grid / Loop Carousel with Query ID
  *   location_team      everyone          location_doctors   doctors only
@@ -17,7 +17,7 @@
  * and [team field="..."] or dynamic tags in the Loop Item.
  *
  * Every profile has a menu anchor (e.g. #dr-jane-lee), so a menu item or button can link
- * straight to it: /kenton/meet-the-doctors/#dr-jane-lee
+ * straight to it: /springfield/meet-the-doctors/#dr-jane-lee
  */
 
 defined( 'ABSPATH' ) || exit;

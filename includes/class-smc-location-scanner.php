@@ -90,7 +90,7 @@ class SMC_Location_Scanner {
 				foreach ( SMC_Location_Cloner::phone_variants( $digits ) as $v ) {
 					$this->phones[ '/(?<!\d)' . preg_quote( $v, '/' ) . '(?!\d)/' ] = $t->name;
 				}
-				// URL-encoded tel links, e.g. tel:(419)%20848-0722
+				// URL-encoded tel links, e.g. tel:(555)%20555-0100
 				$this->phones[ '/\(' . substr( $digits, 0, 3 ) . '\)%20' . substr( $digits, 3, 3 ) . '-' . substr( $digits, 6 ) . '/' ] = $t->name;
 			}
 

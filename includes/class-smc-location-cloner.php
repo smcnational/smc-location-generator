@@ -187,7 +187,7 @@ class SMC_Location_Cloner {
 		}
 
 		uksort( $this->map, fn( $a, $b ) => strlen( $b ) - strlen( $a ) );
-		// Keys that start or end with a digit get digit boundaries, so zip 43326 never matches inside 1520443326.
+		// Keys that start or end with a digit get digit boundaries, so zip 12345 never matches inside 1512345678.
 		$this->pattern = '/' . implode(
 			'|',
 			array_map(
@@ -196,7 +196,7 @@ class SMC_Location_Cloner {
 			)
 		) . '/u';
 
-		// Never swap inside media paths or email addresses (kenton@ must not become a made-up testville@).
+		// Never swap inside media paths or email addresses (oldtown@ must not become a made-up testville@).
 		$protect          = array_merge( [ 'wp-content/uploads/[^\s"\'<>)]+', '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' ], array_map( fn( $p ) => preg_quote( $p, '#' ), (array) $c['protect'] ) );
 		$this->protect_re = '#' . implode( '|', $protect ) . '#u';
 

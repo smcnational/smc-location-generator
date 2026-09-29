@@ -7,7 +7,7 @@
  *
  *   [location_reviews]                     reviews for the page's location, newest first
  *   [location_reviews limit="3" min_rating="5" order="random" columns="1"]
- *   [location_reviews location="kenton"]   a specific location ("all" for every location)
+ *   [location_reviews location="springfield"]   a specific location ("all" for every location)
  *
  * Or design them in Elementor: use a Loop Grid or Loop Carousel and set its Query ID to
  *   location_reviews           newest first

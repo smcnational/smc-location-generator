@@ -28,7 +28,7 @@ Show them anywhere with shortcodes. They work in Elementor's Shortcode widget, i
 | `[location_hours style="table"]` | Override the layout for one spot: `lines`, `table` or `list` |
 | `[location_hours group="no" days="full" show_closed="no"]` | Other one-off overrides |
 | `[location_social]` | List of social links |
-| `[location_url]` | Link to the location's main page (`/kenton/`), or the homepage on pages with no location. `path="services/"` links to a page under it. Use it for the Site Logo link or "Home" menu items |
+| `[location_url]` | Link to the location's main page (`/springfield/`), or the homepage on pages with no location. `path="services/"` links to a page under it. Use it for the Site Logo link or "Home" menu items |
 | `[location_form]` | The location's embedded JotForm (or its booking form) |
 | `[location_team]` | The location's doctors and team (see Team below) |
 | `[location_reviews]` | The location's reviews (see Reviews below) |
@@ -36,7 +36,7 @@ Show them anywhere with shortcodes. They work in Elementor's Shortcode widget, i
 | `[location_map height="300"]` | One map at a different height (optional; overrides the setting for that map only) |
 | `[location field="hours_monday"]` | One value. Works with every field name: `hours_monday` to `hours_sunday`, `hours_note`, `facebook_url`, `instagram_url`, `youtube_url`, `tiktok_url`, `google_business_url` |
 
-Add `location="kenton"` to any of them to show a specific location, for example on the corporate homepage or the Our Locations page.
+Add `location="springfield"` to any of them to show a specific location, for example on the corporate homepage or the Our Locations page.
 
 **Social icons:** use Elementor's Social Icons widget. Add an icon for every network any location uses, and set each icon's link to a dynamic **Shortcode** tag, for example `[location field="facebook_url"]` or `[location field="instagram_url"]`. Icons with no link for the current location are removed automatically, so one widget works for every location. In the Elementor editor they're dimmed instead, so you can still edit them. Turn this off under **Locations > Settings** if needed.
 
@@ -49,7 +49,7 @@ Add `location="kenton"` to any of them to show a specific location, for example 
 
 **Address:** `[location field="address"]` adjusts to where it's used:
 - **On its own** (footer, contact page, a heading or icon list item): two lines, street, then city/state/zip.
-- **Inside a sentence** (a paragraph, list item or heading with other text): one line, like "Located at 965 E Columbus St, Kenton, OH 43326, Infinity Dental is...".
+- **Inside a sentence** (a paragraph, list item or heading with other text): one line, like "Located at 123 Main St, Springfield, ST 12345, Bright Smile Dental is...".
 
 To force one or the other, add `format="inline"` or `format="lines"`. Always use `format="inline"` where the address can't contain HTML, such as Elementor's Google Maps widget address or a link title.
 
@@ -136,7 +136,7 @@ When nothing is red, **Publish location** publishes every draft or pending page 
 
 **All Locations** has a **Launch** column: **Live**, **Ready**, or how many items are left.
 
-From SSH: `wp smc location checklist kenton` shows the checklist, and `wp smc location publish kenton` publishes (same rules; tick the manual checks in wp-admin first).
+From SSH: `wp smc location checklist springfield` shows the checklist, and `wp smc location publish springfield` publishes (same rules; tick the manual checks in wp-admin first).
 
 ## Yoast variables
 
@@ -268,10 +268,10 @@ The list shows photos and can be filtered by location and by doctors or team. **
 
 **Showing the team**
 - `[location_team type="doctors"]` for the Meet the Doctors page, and `[location_team type="team"]` for Meet the Team. Leave `type` out to show everyone.
-- Options: `columns` (1 to 4, default 3), `bio="short|full|none"` (short is `words="40"`), `shape="circle"` for round photos, `limit`, and `location="kenton"` or `location="all"`.
+- Options: `columns` (1 to 4, default 3), `bio="short|full|none"` (short is `words="40"`), `shape="circle"` for round photos, `limit`, and `location="springfield"` or `location="all"`.
 - For a fully designed layout, use a **Loop Grid** or **Loop Carousel** with **Query ID** `location_doctors`, `location_staff` or `location_team`. In the Loop Item, use dynamic tags (Featured Image for the photo, Post Title, Post Content, ACF fields `job_title` and `credentials`) or `[team field="..."]` with `name`, `name_credentials`, `title`, `credentials`, `type`, `bio` (`words="30"`), `photo` or `photo_url`.
 
-**Menu anchors:** every profile has an anchor, so a menu item or button can jump straight to it, for example `/kenton/meet-the-doctors/#dr-jane-lee`. By default it's the name as a slug (`dr-jane-lee`); set **Menu anchor** on the person to change it. The Team list shows each anchor (click to copy). `[location_team]` adds the anchors automatically. In a Loop Item, add Elementor's **Menu Anchor** widget at the top of the card with `[team field="anchor_id"]` as the ID (it outputs just the text, e.g. `dr-jane-lee`). Don't use `[team field="anchor"]` there: that one outputs a full tag and is only for a plain Shortcode widget. Elementor's CSS ID field (Advanced tab) doesn't run shortcodes, so it won't work there.
+**Menu anchors:** every profile has an anchor, so a menu item or button can jump straight to it, for example `/springfield/meet-the-doctors/#dr-jane-lee`. By default it's the name as a slug (`dr-jane-lee`); set **Menu anchor** on the person to change it. The Team list shows each anchor (click to copy). `[location_team]` adds the anchors automatically. In a Loop Item, add Elementor's **Menu Anchor** widget at the top of the card with `[team field="anchor_id"]` as the ID (it outputs just the text, e.g. `dr-jane-lee`). Don't use `[team field="anchor"]` there: that one outputs a full tag and is only for a plain Shortcode widget. Elementor's CSS ID field (Advanced tab) doesn't run shortcodes, so it won't work there.
 
 The page stops 120px above the profile so a sticky header doesn't cover it; change that with `offset="90"` on `[location_team]` or `[team field="anchor"]`. The Menu Anchor widget ignores that offset, so for it add `.elementor-menu-anchor { scroll-margin-top: 120px; }` to Site Settings > Custom CSS.
 
@@ -297,7 +297,7 @@ Everything follows the page's location, so the Meet the Doctors and Meet the Tea
 - Google Maps, both embedded iframes and Elementor's Google Maps widget.
 - Booking form links.
 
-Each result shows the template or page, where it displays (for example "Kenton" or "Whole site"), what was found, the widget it's in, and the shortcode to replace it with. Templates are listed first, since fixing one header or footer covers every page that uses it.
+Each result shows the template or page, where it displays (for example "Springfield" or "Whole site"), what was found, the widget it's in, and the shortcode to replace it with. Templates are listed first, since fixing one header or footer covers every page that uses it.
 
 Settings controlled by an Elementor dynamic tag are skipped, and so is anything already using a `[location...]` shortcode. Run it again after fixing things; it's done when it says "Nothing found."
 
@@ -319,10 +319,10 @@ The **Previous clones** list at the bottom has an **Undo** button for each clone
 ## Add a location (WP-CLI)
 
 ```bash
-wp smc location sources                  # 1. see which locations exist
-wp smc location init kenton Marion       # 2. write marion.json, based on Kenton
-nano marion.json                         # 3. fill in every CHANGE_ME
-wp smc location clone marion.json        # 4. review the plan, answer y
+wp smc location sources                      # 1. see which locations exist
+wp smc location init springfield Shelbyville  # 2. write shelbyville.json, based on Springfield
+nano shelbyville.json                        # 3. fill in every CHANGE_ME
+wp smc location clone shelbyville.json       # 4. review the plan, answer y
 ```
 
 The `clone` command shows the full plan first: the location details, terms, templates, menu, pages, and any warnings. Nothing is created until you confirm. Add `--dry-run` to only see the plan.
@@ -335,12 +335,12 @@ New pages are created as **drafts**. Review them, then publish.
 
 ```json
 {
-  "source": "kenton",
-  "city": "Marion",
-  "state": "OH",
-  "phone": "740-555-0199",
-  "street": "1200 Main St",
-  "city_state_zip": "Marion, OH 43302",
+  "source": "springfield",
+  "city": "Shelbyville",
+  "state": "ST",
+  "phone": "555-555-0199",
+  "street": "456 Oak Ave",
+  "city_state_zip": "Shelbyville, ST 12345",
   "booking_link": "https://form.jotform.com/...",
   "map": "<iframe src=\"https://www.google.com/maps/embed?pb=...\" ...></iframe>",
   "hours": {
@@ -356,8 +356,8 @@ New pages are created as **drafts**. Review them, then publish.
 }
 ```
 
-You only enter the new office's details. The current values (Kenton's phone, street, city/state/zip) are read from the source location's fields and swapped automatically, in every format:
-- **Phone:** `(419) 848-0722`, `419-848-0722`, `tel:` links, and so on.
+You only enter the new office's details. The current values (Springfield's phone, street, city/state/zip) are read from the source location's fields and swapped automatically, in every format:
+- **Phone:** `(555) 555-0100`, `555-555-0100`, `tel:` links, and so on.
 - **Address:** with or without the `<br>`.
 
 **Optional keys**
@@ -375,7 +375,7 @@ You only enter the new office's details. The current values (Kenton's phone, str
 | `status` | `draft` | Status for new pages |
 | `exclude` | `["lp", "services/dentist-*"]` | Pages to skip, matched by slug or path under the location. Wildcards allowed. Setting this replaces the default list. |
 | `fields` | `{}` | Override any location field directly, e.g. `{"booking_label": "Request Appointment"}` |
-| `protect` | `[]` | Strings that must never be swapped (e.g. `"E Columbus St"` if the source city is also a street name) |
+| `protect` | `[]` | Strings that must never be swapped (e.g. `"Springfield Ave"` if the source city is also a street name) |
 | `leftover_check` | `[]` | Extra strings to warn about if they survive the swap |
 | `taxonomies` | `["location_category", "page_type"]` | Taxonomies whose location-specific terms get cloned |
 | `yoast` | `{}` | Yoast title/description overrides by page slug (`_parent` for the location's main page). Supports `{city}` and `{state}`. Without this, Yoast data is copied with the city swapped. |
@@ -384,7 +384,7 @@ You only enter the new office's details. The current values (Kenton's phone, str
 
 ```bash
 wp smc location list                # clones that can be undone
-wp smc location undo marion         # deletes the pages, templates, menu and terms it created
+wp smc location undo shelbyville         # deletes the pages, templates, menu and terms it created
 ```
 
 `undo` removes only what the clone created. Nothing else on the site is touched. It warns if any of those items were edited or published since the clone. If a clone fails partway, `undo` removes whatever it had already created.
@@ -412,14 +412,14 @@ add_filter( 'smc_location_cloner_defaults', function ( $d ) {
 
 ## Warnings you might see
 
-- **`still contains "Kenton": ...`** Something with the old city survived the swap. The snippet shows where. Add it to `replace`, or fix it after cloning. Image filenames are never changed, but the image itself may be location-specific.
+- **`still contains "Springfield": ...`** Something with the old city survived the swap. The snippet shows where. Add it to `replace`, or fix it after cloning. Image filenames are never changed, but the image itself may be location-specific.
 - **`links to excluded page ... (will 404)`** A cloned page links to a page that was skipped. Remove the link after cloning.
 - **`has no location term`** `[location]` shortcodes on that page will be empty. That's usually fine for container pages.
 - **`matched by name only; its display conditions were not copied`** A template has the city in its title but isn't tied to the location's terms. Check its conditions in **Templates > Theme Builder**.
 
 ## Troubleshooting
 
-- **`Could not read ...json`:** JSON syntax error. Run `python3 -m json.tool marion.json` to find the line.
+- **`Could not read ...json`:** JSON syntax error. Run `python3 -m json.tool shelbyville.json` to find the line.
 - **`Failed to get current SQL modes ... mariadb`:** only affects `wp db` commands, not this tool. Fix: `mkdir -p ~/bin && ln -s "$(which mysql)" ~/bin/mariadb && ln -s "$(which mysqldump)" ~/bin/mariadb-dump`, then add `~/bin` to `PATH`.
 - **Create times out in wp-admin:** the host's PHP time limit is too low for a large location. Use the WP-CLI command for that site, then undo or manage it from either place.
 - **Iframes or scripts missing from cloned pages:** the user running the clone needs the `unfiltered_html` capability. Single-site administrators have it; on multisite, only super admins do.

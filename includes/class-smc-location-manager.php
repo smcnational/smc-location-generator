@@ -334,7 +334,7 @@ class SMC_Location_Manager {
 		return $plan;
 	}
 
-	/** The location's main page path, e.g. "/kenton", or "/<slug>" if it has no page. */
+	/** The location's main page path, e.g. "/springfield", or "/<slug>" if it has no page. */
 	public static function location_path( WP_Term $term ) {
 		$page = self::location_page( $term );
 		return '/' . ( $page ? get_page_uri( $page ) : $term->slug );
