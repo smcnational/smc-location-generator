@@ -1,8 +1,9 @@
 <?php
 /**
- * Finds location details that are typed into Elementor templates and pages instead of
- * coming from the location shortcodes: phone numbers, addresses, hours, social links,
- * Google Maps and booking links.
+ * Finds details that are typed into Elementor templates and pages instead of coming from
+ * the plugin's shortcodes: phone numbers, addresses, hours, social links, Google Maps,
+ * booking links, emails, forms, team profiles, reviews, the site name, the logo, holiday
+ * closures and copyright years. Pages' Yoast SEO titles and descriptions are checked too.
  *
  * Settings that an Elementor dynamic tag overrides are skipped, since the page doesn't
  * show them. Anything already using a [location...] shortcode is skipped too.
@@ -23,7 +24,15 @@ class SMC_Location_Scanner {
 		'Form'         => '[location_form]',
 		'Team'         => 'Add the person under Locations > Team, then use [location_team] or a Loop Grid with Query ID location_doctors / location_staff',
 		'Reviews'      => 'Import them (Locations > Import Reviews), then use [location_reviews] or a Loop Carousel with Query ID location_reviews',
+		'Site name'    => '[site_name] (Site Title) or [brand_name] (organization name in Yoast). In a Heading, use the Shortcode dynamic tag',
+		'Logo'         => 'Site Logo widget or [brand_logo], so it follows the logo on the Brand screen',
+		'Holiday'      => 'Add it under Locations > Holidays and use [location_closure_notice] or [location_holidays]',
+		'Year'         => '[current_year]',
+		'Yoast SEO'    => 'Use %%location_city%%, %%location_phone%% and the other location variables (wp smc location yoast-vars converts them)',
 	];
+
+	/** The plugin's own shortcodes: text inside these is already connected. */
+	const OWN = 'location|location_[a-z_]+|site_name|brand_name|brand_logo|current_year|current_slug|review|team';
 
 	private $phones   = []; // regex => location name
 	private $needles  = []; // [ kind, text, location name ]
@@ -82,8 +91,25 @@ class SMC_Location_Scanner {
 				}
 			}
 		}
+		// The site and organization names (skip very short or generic ones).
+		$names = [ html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ];
+		if ( class_exists( 'SMC_Location_Schema' ) ) {
+			$names[] = SMC_Location_Schema::brand();
+		}
+		foreach ( array_unique( array_filter( array_map( 'trim', $names ) ) ) as $n ) {
+			if ( strlen( $n ) >= 5 && ! in_array( strtolower( $n ), [ 'home', 'dental', 'dentist', 'dentistry' ], true ) ) {
+				$this->site_names[] = $n;
+			}
+		}
+		$this->logo_ids = array_filter( [ (int) get_theme_mod( 'custom_logo' ), class_exists( 'SMC_Location_Brand' ) ? (int) SMC_Location_Brand::options()['mobile_logo'] : 0 ] );
+
 		foreach ( SMC_Location_Manager::locations() as $t ) {
 			$tid = $t->term_id;
+
+			$cs = trim( (string) get_term_meta( $tid, 'city_state', true ) );
+			if ( strlen( $cs ) >= 5 ) {
+				$this->city_states[ $cs ] = $t->name;
+			}
 
 			$digits = preg_replace( '/\D/', '', (string) get_term_meta( $tid, 'phone_label', true ) );
 			if ( 10 === strlen( $digits ) ) {
@@ -113,6 +139,9 @@ class SMC_Location_Scanner {
 
 	/** Names of saved team members, to spot profiles typed into widgets. */
 	private $team_names = [];
+	private $site_names = [];
+	private $logo_ids   = [];
+	private $city_states = []; // "Springfield, ST" => location name (Yoast check)
 
 	/* ========== Scanning ========== */
 
@@ -134,6 +163,9 @@ class SMC_Location_Scanner {
 			$this->walk( $data, $findings );
 		} elseif ( '' !== trim( $post->post_content ) ) {
 			$this->check_string( $post->post_content, 'content', $findings );
+		}
+		if ( ! $is_tpl ) {
+			$this->check_yoast( $post->ID, $findings );
 		}
 		if ( ! $findings ) {
 			return;
@@ -160,6 +192,9 @@ class SMC_Location_Scanner {
 			$widget = $el['widgetType'] ?? ( $el['elType'] ?? '' );
 			if ( ! empty( $el['settings'] ) && is_array( $el['settings'] ) ) {
 				$settings = $el['settings'];
+				if ( $this->logo_ids && 'image' === $widget && empty( $settings['__dynamic__']['image'] ) && in_array( (int) ( $settings['image']['id'] ?? 0 ), $this->logo_ids, true ) ) {
+					$this->add( $findings, 'Logo', 'Image widget with the logo picked from the Media Library', $widget );
+				}
 				if ( 'google_maps' === $widget && ! empty( $settings['address'] ) && empty( $settings['__dynamic__']['address'] ) ) {
 					$this->add( $findings, 'Map', 'Elementor Google Maps widget: ' . $settings['address'], $widget );
 					unset( $settings['address'] );
@@ -196,6 +231,10 @@ class SMC_Location_Scanner {
 			if ( '__dynamic__' === $k || in_array( $k, $dynamic, true ) || ( is_string( $k ) && '_' === $k[0] ) ) {
 				continue;
 			}
+			// Image data (file names, alt text) isn't page text.
+			if ( is_string( $k ) && preg_match( '/(^|_)(image|images|gallery|alt|css_classes|custom_css|link_attributes)$/', $k ) ) {
+				continue;
+			}
 			if ( is_string( $v ) ) {
 				$this->check_string( $v, $widget, $findings );
 			} elseif ( is_array( $v ) ) {
@@ -206,7 +245,7 @@ class SMC_Location_Scanner {
 
 	private function check_string( $s, $widget, array &$findings ) {
 		// Shortcodes are already connected; check whatever text is around them.
-		$s = preg_replace( '/\[location[^\]]*\]/i', '', $s );
+		$s = preg_replace( '/\[\/?(?:' . self::OWN . ')\b[^\]]*\]/i', '', $s );
 		if ( strlen( trim( $s ) ) < 5 ) {
 			return;
 		}
@@ -251,10 +290,67 @@ class SMC_Location_Scanner {
 			$this->add( $findings, 'Map', 'Embedded map: ' . ( strlen( $m[0] ) > 90 ? substr( $m[0], 0, 87 ) . '...' : $m[0] ), $widget );
 		}
 
+		// The site or organization name typed in (not in a URL or email, e.g. brightsmiledental.com).
+		$plain = wp_strip_all_tags( $s );
+		foreach ( $this->site_names as $n ) {
+			if ( preg_match( '/(?<![\w@.\/-])' . preg_quote( $n, '/' ) . '(?![\w.@-]*\.(?:com|net|org))(?!\w)/i', $plain, $m, PREG_OFFSET_CAPTURE ) ) {
+				$this->add( $findings, 'Site name', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget );
+				break;
+			}
+		}
+
+		// Holiday closures typed into a page ("Closed Thanksgiving", "holiday hours").
+		$hol = '(?:thanksgiving|christmas|new year|memorial day|labor day|independence day|july 4|4th of july|easter|holiday)';
+		if ( preg_match( "/\b(?:closed|closing|close early|holiday hours|office hours)\b[^.!?\n]{0,60}\b$hol|\b$hol\b[^.!?\n]{0,60}\b(?:closed|hours)\b/i", $plain, $m, PREG_OFFSET_CAPTURE ) ) {
+			$this->add( $findings, 'Holiday', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget );
+		}
+
+		// A copyright line with a typed year goes stale every January.
+		if ( preg_match( '/(?:©|&copy;|\(c\)|copyright)\s*(?:[^<\d]{0,20})?(19|20)\d{2}\b/i', $s, $m, PREG_OFFSET_CAPTURE ) ) {
+			$this->add( $findings, 'Year', $this->snip( $s, $m[0][1], strlen( $m[0][0] ) ), $widget );
+		}
+
 		$social = '#https?://(?:www\.|m\.)?(?:facebook\.com|fb\.com|instagram\.com|tiktok\.com|youtube\.com/(?:@|c/|channel/|user/)|g\.page|business\.google\.com|google\.com/maps/place|maps\.app\.goo\.gl|search\.google\.com/local)[^\s"\'<>]*#i';
 		if ( preg_match_all( $social, $s, $all, PREG_OFFSET_CAPTURE ) ) {
 			foreach ( $all[0] as $hit ) {
 				$this->add( $findings, 'Social link', $hit[0], $widget );
+			}
+		}
+	}
+
+	/** Typed-in phone numbers, addresses and city names in a page's Yoast SEO fields. */
+	private function check_yoast( $post_id, array &$findings ) {
+		foreach ( [ 'title' => 'SEO title', 'metadesc' => 'Meta description', 'opengraph-title' => 'Social title', 'opengraph-description' => 'Social description' ] as $f => $label ) {
+			$v = (string) get_post_meta( $post_id, "_yoast_wpseo_$f", true );
+			if ( '' === trim( $v ) ) {
+				continue;
+			}
+			$hit = null;
+			foreach ( $this->phones as $re => $loc ) {
+				if ( preg_match( $re, $v ) ) {
+					$hit = [ 'phone', $loc ];
+					break;
+				}
+			}
+			if ( ! $hit ) {
+				$texts = [];
+				foreach ( $this->needles as list( $kind, $text, $loc ) ) {
+					if ( 'Address' === $kind ) {
+						$texts[] = [ $text, $loc, 'address' ];
+					}
+				}
+				foreach ( $this->city_states as $text => $loc ) {
+					$texts[] = [ $text, $loc, 'city and state' ];
+				}
+				foreach ( $texts as list( $text, $loc, $what ) ) {
+					if ( false !== stripos( $v, $text ) ) {
+						$hit = [ $what, $loc ];
+						break;
+					}
+				}
+			}
+			if ( $hit ) {
+				$this->add( $findings, 'Yoast SEO', "$label has the $hit[0] typed in: " . ( mb_strlen( $v ) > 90 ? mb_substr( $v, 0, 87 ) . '...' : $v ), 'yoast', $hit[1] );
 			}
 		}
 	}

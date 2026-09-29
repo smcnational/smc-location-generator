@@ -31,7 +31,7 @@ class SMC_Location_Scan_Page {
 		?>
 		<div class="wrap smc-scan">
 			<h1>Scan for Typed-In Details</h1>
-			<p>Finds phone numbers, addresses, hours, social links, maps and booking links that are typed into Elementor templates and pages instead of coming from the location shortcodes. Swap each one for the suggested shortcode, and it will update automatically whenever the location's details change. New locations cloned from it will show their own details too.</p>
+			<p>Finds details typed into Elementor templates and pages instead of coming from the plugin's shortcodes: phone numbers, addresses, hours, social links, maps, booking links, emails, forms, team profiles, reviews, the site name, the logo, holiday closures and copyright years, plus typed-in details in pages' Yoast SEO titles and descriptions. Swap each one for the suggested shortcode, and it will update automatically whenever the location's details change. New locations cloned from it will show their own details too.</p>
 			<p class="description">Settings controlled by an Elementor dynamic tag are skipped, since they're already connected.</p>
 
 			<form method="post">
@@ -67,7 +67,7 @@ class SMC_Location_Scan_Page {
 
 	private function render_results( $results ) {
 		if ( ! $results ) {
-			echo '<div class="notice notice-success inline"><p><strong>Nothing found.</strong> Every location detail in the scanned items comes from the location shortcodes.</p></div>';
+			echo '<div class="notice notice-success inline"><p><strong>Nothing found.</strong> Everything in the scanned items comes from the plugin\'s shortcodes.</p></div>';
 			return;
 		}
 

@@ -52,6 +52,10 @@ class SMC_Location_Brand {
 				if ( ! shortcode_exists( 'site_name' ) ) {
 					add_shortcode( 'site_name', fn() => esc_html( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ) );
 				}
+				// [current_year]: for copyright lines, so they never go stale.
+				if ( ! shortcode_exists( 'current_year' ) ) {
+					add_shortcode( 'current_year', fn() => esc_html( wp_date( 'Y' ) ) );
+				}
 				// [brand_name]: the organization name in Yoast SEO (the name the schema uses), or the Site Title.
 				if ( ! shortcode_exists( 'brand_name' ) ) {
 					add_shortcode(

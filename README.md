@@ -282,7 +282,7 @@ New locations start with no reviews; they're never copied from another location.
 - These are Elementor's settings. Astra's own buttons and headings (Customizer) aren't changed.
 - **Restore:** every save keeps the previous version of all of the above (the last 10 saves), each with color swatches. **Restore** puts one back. Versions saved before typography and buttons were added restore only the logo, favicon, colors and fonts.
 
-**Name shortcodes:** `[site_name]` is the Site Title (Settings > General). `[brand_name]` is the organization name set in Yoast SEO (the name the schema uses), or the Site Title if there isn't one. Both work inside a sentence in a Text Editor widget: `Welcome to [site_name], serving families since 1998.` In a Heading widget, use the **Shortcode** dynamic tag.
+**Name and year shortcodes:** `[current_year]` is this year, for copyright lines (`© [current_year] [brand_name]`). `[site_name]` is the Site Title (Settings > General). `[brand_name]` is the organization name set in Yoast SEO (the name the schema uses), or the Site Title if there isn't one. Both work inside a sentence in a Text Editor widget: `Welcome to [site_name], serving families since 1998.` In a Heading widget, use the **Shortcode** dynamic tag.
 
 ## Export / Import
 
@@ -350,10 +350,17 @@ Everything follows the page's location, so the Meet the Doctors and Meet the Tea
 - Social profile links.
 - Google Maps, both embedded iframes and Elementor's Google Maps widget.
 - Booking form links.
+- Emails and `mailto:` links, and embedded JotForms.
+- Team profiles typed into widgets, and reviews typed into testimonial widgets.
+- The site name or organization name typed into text (use `[site_name]` or `[brand_name]`). Web addresses and emails like `brightsmiledental.com` are ignored.
+- The logo picked into an Image widget from the Media Library (use the Site Logo widget or `[brand_logo]`, so it follows the Brand screen).
+- Holiday closures typed into a page, like "Closed Thanksgiving" or "Holiday hours" (add them under Locations > Holidays instead).
+- Copyright lines with a typed year, like "© 2025" (use `[current_year]`).
+- On pages: phone numbers, addresses and "City, ST" typed into Yoast SEO titles and descriptions (use the Yoast location variables, or `wp smc location yoast-vars`).
 
 Each result shows the template or page, where it displays (for example "Springfield" or "Whole site"), what was found, the widget it's in, and the shortcode to replace it with. Templates are listed first, since fixing one header or footer covers every page that uses it.
 
-Settings controlled by an Elementor dynamic tag are skipped, and so is anything already using a `[location...]` shortcode. Run it again after fixing things; it's done when it says "Nothing found."
+Settings controlled by an Elementor dynamic tag are skipped, and so is anything already using one of the plugin's shortcodes. Image file names and alt text aren't checked. Run it again after fixing things; it's done when it says "Nothing found."
 
 From WP-CLI: `wp smc location scan`, with `--templates-only`, `--pages-only`, or `--format=csv > typed-in.csv` for a spreadsheet.
 
