@@ -87,6 +87,12 @@ class SMC_Location_Launch {
 			$days += '' !== $m( "hours_$d" ) ? 1 : 0;
 		}
 		$add( 'details', 'hours', 'Hours', $days ? 'ok' : 'fail', $days ? '' : 'No days set.' );
+		if ( $days && class_exists( 'SMC_Location_Schema' ) && SMC_Location_Schema::enabled() ) {
+			$unread = SMC_Location_Schema::hours( $tid )['unreadable'];
+			if ( $unread ) {
+				$add( 'details', 'schema_hours', 'Hours in schema', 'warn', esc_html( 'Left out of the Google schema because they aren\'t times like "9:00 AM - 5:00 PM" or "Closed": ' . implode( ', ', $unread ) . '.' ) );
+			}
+		}
 		$add( 'details', 'map', 'Google Map', '' !== SMC_Location_Fields::map_src( $m( 'map_embed' ) ) ? 'ok' : 'fail', '' !== SMC_Location_Fields::map_src( $m( 'map_embed' ) ) ? '' : 'Missing. Paste the embed code below.' );
 		$add( 'details', 'email', 'Email', '' !== $m( 'email' ) ? 'ok' : 'warn', '' !== $m( 'email' ) ? '' : 'Not set. Email buttons are hidden.' );
 		$add( 'details', 'gbp', 'Google Business Profile link', '' !== $m( 'google_business_url' ) ? 'ok' : 'warn', '' !== $m( 'google_business_url' ) ? '' : 'Not set.' );

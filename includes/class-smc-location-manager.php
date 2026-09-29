@@ -577,7 +577,17 @@ class SMC_Location_Manager {
 			Also: <code class="smc-copy" title="Click to copy">[location_url]</code> link to this location's main page &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="doctors"]</code> its doctors &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_team type="team"]</code> its team &nbsp;&middot;&nbsp; <code class="smc-copy" title="Click to copy">[location_reviews]</code> its reviews.
 		</p><p>
 			In Yoast SEO titles and descriptions: <?php foreach ( array_keys( SMC_Location_Yoast::vars() ) as $yv ) : ?><code class="smc-copy" title="Click to copy">%%<?php echo esc_html( $yv ); ?>%%</code> <?php endforeach; ?>
-		</p></div>
+		</p>
+		<?php if ( SMC_Location_Schema::enabled() ) : ?>
+			<?php $sp = self::location_page( $term ); ?>
+			<details><summary>Schema for Google (built from the details below)</summary>
+				<pre style="max-height:320px;overflow:auto;background:#f6f7f7;padding:10px;font-size:12px"><?php echo esc_html( wp_json_encode( SMC_Location_Schema::node( $term ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ); ?></pre>
+				<?php if ( $sp && 'publish' === $sp->post_status ) : ?>
+					<p><a href="<?php echo esc_url( 'https://search.google.com/test/rich-results?url=' . rawurlencode( get_permalink( $sp ) ) ); ?>" target="_blank" rel="noopener">Test the live page in Google's Rich Results Test</a></p>
+				<?php endif; ?>
+			</details>
+		<?php endif; ?>
+		</div>
 
 		<?php SMC_Location_Launch::render( $term ); ?>
 

@@ -182,6 +182,24 @@ For example: `Dentist in %%location_city_state%% | %%sitename%%`. They also work
 
 **Switching a site over:** replace the store locator's shortcode or widget on Our Locations with `[location_list]` in a Shortcode widget, check it, then deactivate the store locator plugin. Once `[location_list]` is on a published page, the launch checklist's store locator item turns green on its own.
 
+## Schema
+
+Every page of a location tells Google it belongs to a local business (**Dentist** by default), built from the location's details, so there's nothing extra to fill in:
+
+- name (from a pattern in Settings, default `{brand} - {city}`), main page URL, phone (`+1-555-555-0100`), email
+- address, map coordinates (from the Google Map embed), and opening hours (from the hours fields)
+- Google Business Profile link (`hasMap`) and social links (`sameAs`)
+- the logo, the main page's featured image, price range, the city it serves
+- its published doctors, with job title, photo and profile link
+
+All pages of a location share one business (`@id` is the main page URL + `#localbusiness`). With Yoast SEO it's added to Yoast's schema graph, linked to the site's organization as `parentOrganization`, and set as what each page is `about`. Without Yoast it's printed as its own JSON-LD. Corporate pages get Corporate's details only if Corporate has an address.
+
+**Hours** like `9:00 AM - 5:00 PM`, `8am-5pm`, `7:30 - 4 PM`, `8 AM - 12 PM, 1 PM - 5 PM` and `Closed` are understood. Anything else (`By appointment`) is left out of the schema and flagged amber on the launch checklist.
+
+**Settings** (Locations > Settings > Schema): turn it off, change the business type (Dentist, Medical clinic, Medical business, Local business), the name pattern (match the Google Business Profile names), and the price range.
+
+Each location's edit screen shows its schema and links to Google's Rich Results Test for the live page. Reviews aren't included: Google doesn't show star ratings for a business's own reviews on its own site.
+
 ## Reviews
 
 **Locations > Reviews** holds every review on the site. Each one has:

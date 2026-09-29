@@ -28,6 +28,10 @@ class SMC_Location_Settings {
 			'hide_empty_buttons' => 1,
 			'email_label_default' => 'Email Us',
 			'form_height'        => '600px',
+			'schema_on'          => 1,
+			'schema_type'        => 'Dentist',
+			'schema_name'        => '{brand} - {city}',
+			'schema_price'       => '$$',
 		];
 	}
 
@@ -249,6 +253,70 @@ class SMC_Location_Settings {
 		);
 
 		add_settings_section(
+			'schema',
+			'Schema',
+			function () {
+				echo '<p>Structured data that tells Google each office is a local business: name, address, phone, hours, map location, Google Business Profile, social links and doctors, all from the location\'s details. Every page of a location includes it. With Yoast SEO it\'s added to Yoast\'s schema and linked to the site\'s organization.</p>';
+			},
+			self::PAGE
+		);
+
+		add_settings_field(
+			'schema_on',
+			'Location schema',
+			function () {
+				printf( '<label><input type="checkbox" name="%s[schema_on]" value="1" %s> Add it to location pages</label>', esc_attr( self::OPTION ), checked( self::get( 'schema_on' ), 1, false ) );
+			},
+			self::PAGE,
+			'schema'
+		);
+
+		add_settings_field(
+			'schema_type',
+			'Business type',
+			function () {
+				echo '<select name="' . esc_attr( self::OPTION ) . '[schema_type]" id="schema_type">';
+				foreach ( SMC_Location_Schema::TYPES as $k => $label ) {
+					printf( '<option value="%s" %s>%s</option>', esc_attr( $k ), selected( self::get( 'schema_type' ), $k, false ), esc_html( $label ) );
+				}
+				echo '</select><p class="description">Dentist covers general, cosmetic, pediatric and orthodontic dental offices.</p>';
+			},
+			self::PAGE,
+			'schema',
+			[ 'label_for' => 'schema_type' ]
+		);
+
+		add_settings_field(
+			'schema_name',
+			'Business name',
+			function () {
+				printf( '<input name="%s[schema_name]" id="schema_name" class="regular-text" value="%s" placeholder="{brand} - {city}">', esc_attr( self::OPTION ), esc_attr( self::get( 'schema_name' ) ) );
+				echo '<p class="description">Use the name each office has on its Google Business Profile. <code>{brand}</code> is the organization name in Yoast (or the site title), <code>{city}</code> the location\'s city, <code>{location}</code> its name in Locations, <code>{city_state}</code> "Springfield, ST".';
+				if ( class_exists( 'SMC_Location_Manager' ) && class_exists( 'SMC_Location_Schema' ) ) {
+					$first = SMC_Location_Manager::locations()[0] ?? null;
+					if ( $first ) {
+						echo ' For example: <strong>' . esc_html( SMC_Location_Schema::name( $first ) ) . '</strong>';
+					}
+				}
+				echo '</p>';
+			},
+			self::PAGE,
+			'schema',
+			[ 'label_for' => 'schema_name' ]
+		);
+
+		add_settings_field(
+			'schema_price',
+			'Price range',
+			function () {
+				printf( '<input name="%s[schema_price]" id="schema_price" class="small-text" value="%s" placeholder="$$"><p class="description">Shown by Google for some businesses. <code>$</code> to <code>$$$$</code>, or blank to leave it out.</p>', esc_attr( self::OPTION ), esc_attr( self::get( 'schema_price' ) ) );
+			},
+			self::PAGE,
+			'schema',
+			[ 'label_for' => 'schema_price' ]
+		);
+
+		add_settings_section(
 			'map',
 			'Google Map',
 			function () {
@@ -310,6 +378,13 @@ class SMC_Location_Settings {
 			$l                  = trim( sanitize_text_field( $labels[ $i ] ?? '' ) );
 			$out['hours_short_labels'][ $i ] = '' === $l ? $d : $l;
 		}
+
+		// Schema.
+		$out['schema_on']    = empty( $in['schema_on'] ) ? 0 : 1;
+		$out['schema_type']  = isset( SMC_Location_Schema::TYPES[ $in['schema_type'] ?? '' ] ) ? $in['schema_type'] : 'Dentist';
+		$name                = trim( sanitize_text_field( $in['schema_name'] ?? '' ) );
+		$out['schema_name']  = '' === $name ? '{brand} - {city}' : $name;
+		$out['schema_price'] = substr( trim( sanitize_text_field( $in['schema_price'] ?? '' ) ), 0, 20 );
 
 		foreach ( [ 'map_height' => 'Map height', 'map_height_mobile' => 'Map height on phones', 'form_height' => 'Form starting height' ] as $k => $label ) {
 			$raw = trim( (string) ( $in[ $k ] ?? '' ) );
