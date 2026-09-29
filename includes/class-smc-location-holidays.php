@@ -20,6 +20,7 @@ defined( 'ABSPATH' ) || exit;
 class SMC_Location_Holidays {
 
 	const OPTION = 'smc_location_holidays';
+	const STYLE  = 'smc_location_holiday_notice';
 	const SLUG   = 'smc-location-holidays';
 	const CAP    = 'manage_options';
 	const TAX    = 'location_category';
@@ -49,6 +50,44 @@ class SMC_Location_Holidays {
 				}
 			}
 		);
+	}
+
+	/* ========== Notice style (Locations > Holidays > Closure notice) ========== */
+
+	public static function style_defaults() {
+		return [
+			'days'         => 14,
+			'align'        => '',
+			'padding'      => '',
+			'background'   => '',
+			'color'        => '',
+			'border'       => '',
+			'border_side'  => 'left',
+			'border_width' => '',
+			'radius'       => '',
+			'closed'       => '{who} will be closed {date} for {label}.',
+			'special'      => '{who} will be open {hours} on {date} for {label}.',
+		];
+	}
+
+	/** Saved notice settings over the defaults. Shortcode options still override these. */
+	public static function style() {
+		$saved = get_option( self::STYLE, [] );
+		return array_merge( self::style_defaults(), is_array( $saved ) ? array_intersect_key( $saved, self::style_defaults() ) : [] );
+	}
+
+	/** Elementor global colors: id => [ title, hex ]. */
+	public static function global_colors() {
+		$out = [];
+		if ( class_exists( 'SMC_Location_Brand' ) && SMC_Location_Brand::kit_id() ) {
+			$s = (array) get_post_meta( SMC_Location_Brand::kit_id(), '_elementor_page_settings', true );
+			foreach ( array_merge( (array) ( $s['system_colors'] ?? [] ), (array) ( $s['custom_colors'] ?? [] ) ) as $c ) {
+				if ( ! empty( $c['_id'] ) ) {
+					$out[ $c['_id'] ] = [ $c['title'] ?? $c['_id'], $c['color'] ?? '' ];
+				}
+			}
+		}
+		return $out;
 	}
 
 	/* ========== Data ========== */
@@ -178,6 +217,41 @@ class SMC_Location_Holidays {
 			exit;
 		}
 
+		if ( 'style' === $do ) {
+			$in  = wp_unslash( (array) ( $_POST['style'] ?? [] ) );
+			$out = self::style_defaults();
+			$bad = [];
+			$out['days']  = max( 1, min( 60, (int) ( $in['days'] ?? 14 ) ) );
+			$out['align'] = in_array( $in['align'] ?? '', [ 'left', 'center', 'right' ], true ) ? $in['align'] : '';
+			foreach ( [ 'padding' => 'Padding', 'radius' => 'Corner radius' ] as $k => $label ) {
+				$v = trim( sanitize_text_field( $in[ $k ] ?? '' ) );
+				if ( '' !== $v && '' === self::css_sides( $v ) ) {
+					$bad[] = $label;
+					$v     = '';
+				}
+				$out[ $k ] = $v;
+			}
+			foreach ( [ 'background' => 'Background', 'color' => 'Text color', 'border' => 'Border color' ] as $k => $label ) {
+				$g = sanitize_text_field( $in[ $k ]['g'] ?? '' );
+				$v = 'custom' === $g ? trim( sanitize_text_field( $in[ $k ]['hex'] ?? '' ) ) : $g;
+				if ( 'custom' === $g && '' !== $v && ! preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $v ) ) {
+					$bad[] = $label;
+					$v     = '';
+				}
+				$out[ $k ] = $v;
+			}
+			$out['border_side']  = in_array( $in['border_side'] ?? '', [ 'left', 'top', 'bottom', 'all', 'none' ], true ) ? $in['border_side'] : 'left';
+			$w                   = trim( (string) ( $in['border_width'] ?? '' ) );
+			$out['border_width'] = is_numeric( $w ) ? (string) (float) $w : '';
+			foreach ( [ 'closed', 'special' ] as $k ) {
+				$t         = trim( sanitize_text_field( $in[ $k ] ?? '' ) );
+				$out[ $k ] = '' === $t ? self::style_defaults()[ $k ] : $t;
+			}
+			update_option( self::STYLE, $out, false );
+			wp_safe_redirect( self::url( [ 'msg' => 'style', 'bad' => rawurlencode( implode( ', ', $bad ) ) ] ) . '#notice' );
+			exit;
+		}
+
 		if ( 'clear_past' === $do ) {
 			$today = self::today();
 			self::save( array_values( array_filter( self::all(), fn( $e ) => ( $e['to'] ?: $e['from'] ) >= $today ) ) );
@@ -231,6 +305,11 @@ class SMC_Location_Holidays {
 				<?php endif; ?></p></div>
 			<?php elseif ( 'common' === $msg ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php echo (int) ( $_GET['n'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification ?> holiday(s) added. Check the dates and which locations they apply to below.</p></div>
+			<?php elseif ( 'style' === $msg ) : ?>
+				<div class="notice notice-success is-dismissible"><p>Closure notice saved.
+				<?php if ( ! empty( $_GET['bad'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
+					These weren't valid and were left at the default: <?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['bad'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification ?>.
+				<?php endif; ?></p></div>
 			<?php elseif ( 'cleared' === $msg ) : ?>
 				<div class="notice notice-success is-dismissible"><p>Past holidays removed.</p></div>
 			<?php endif; ?>
@@ -252,6 +331,8 @@ class SMC_Location_Holidays {
 				<p><button type="button" class="button" id="smc-h-add">Add another</button></p>
 				<?php submit_button( 'Save holidays' ); ?>
 			</form>
+
+			<?php self::render_style_form(); ?>
 
 			<h2>Add common holidays</h2>
 			<form method="post">
@@ -317,6 +398,106 @@ class SMC_Location_Holidays {
 		<?php
 	}
 
+	private static function color_field( $name, $value, array $colors, $allow_none = false ) {
+		$is_global = isset( $colors[ $value ] );
+		$sel       = $is_global ? $value : ( 'none' === $value && $allow_none ? 'none' : ( '' !== $value ? 'custom' : '' ) );
+		$out       = '<span class="smc-n-color"><select name="style[' . esc_attr( $name ) . '][g]"><option value="">Default</option>';
+		if ( $allow_none ) {
+			$out .= '<option value="none" ' . selected( $sel, 'none', false ) . '>None</option>';
+		}
+		foreach ( $colors as $id => [ $title, $hex ] ) {
+			$out .= '<option value="' . esc_attr( $id ) . '" data-color="' . esc_attr( $hex ) . '" ' . selected( $sel, $id, false ) . '>' . esc_html( $title ) . '</option>';
+		}
+		$out .= '<option value="custom" ' . selected( $sel, 'custom', false ) . '>Custom&hellip;</option></select>';
+		$out .= ' <input name="style[' . esc_attr( $name ) . '][hex]" class="code smc-n-hex" size="9" placeholder="#1A73E8" value="' . esc_attr( 'custom' === $sel ? $value : '' ) . '"></span>';
+		return $out;
+	}
+
+	private static function render_style_form() {
+		$st     = self::style();
+		$colors = self::global_colors();
+		$sample = [ 'from' => wp_date( 'Y-m-d', strtotime( '+5 days' ) ), 'to' => '', 'label' => 'Thanksgiving', 'hours' => '' ];
+		$first  = SMC_Location_Manager::locations()[0] ?? null;
+		$who    = str_replace( '{location}', $first ? $first->name : 'Springfield', 'Our {location} office' );
+		$text   = strtr( $st['closed'], [ '{who}' => $who, '{date}' => self::date_text( $sample ), '{label}' => 'Thanksgiving', '{hours}' => '' ] );
+		$map    = array_map( fn( $c ) => $c[1], $colors );
+		?>
+		<h2 id="notice">Closure notice</h2>
+		<p>How <code>[location_closure_notice]</code> looks and reads everywhere on the site. Put it in each location's header template (and Corporate's), below the navigation, in a container with no padding. Options on a single shortcode still override these.</p>
+		<form method="post">
+			<?php wp_nonce_field( 'smc_holidays' ); ?>
+			<input type="hidden" name="smc_do" value="style">
+			<table class="form-table smc-n-form" role="presentation">
+				<tr><th scope="row">Show it</th><td><input type="number" name="style[days]" min="1" max="60" class="small-text" value="<?php echo (int) $st['days']; ?>"> days before a closure, and during it</td></tr>
+				<tr><th scope="row">Alignment</th><td><select name="style[align]">
+					<?php foreach ( [ '' => 'Default (left)', 'left' => 'Left', 'center' => 'Center', 'right' => 'Right' ] as $k => $l ) : ?>
+						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $st['align'], $k ); ?>><?php echo esc_html( $l ); ?></option>
+					<?php endforeach; ?>
+				</select></td></tr>
+				<tr><th scope="row">Background</th><td><?php echo self::color_field( 'background', $st['background'], $colors ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+				<tr><th scope="row">Text color</th><td><?php echo self::color_field( 'color', $st['color'], $colors ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td></tr>
+				<tr><th scope="row">Border</th><td>
+					<?php echo self::color_field( 'border', $st['border'], $colors, true ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+					<select name="style[border_side]">
+						<?php foreach ( [ 'left' => 'Left side', 'top' => 'Top', 'bottom' => 'Bottom', 'all' => 'All sides', 'none' => 'No border' ] as $k => $l ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $st['border_side'], $k ); ?>><?php echo esc_html( $l ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<input name="style[border_width]" class="small-text" value="<?php echo esc_attr( $st['border_width'] ); ?>" placeholder="4"> px wide
+				</td></tr>
+				<tr><th scope="row">Padding</th><td><input name="style[padding]" class="code" size="10" value="<?php echo esc_attr( $st['padding'] ); ?>" placeholder="12 16"> px <span class="description">Like CSS: <code>12 16</code> is 12 top and bottom, 16 left and right.</span></td></tr>
+				<tr><th scope="row">Corner radius</th><td><input name="style[radius]" class="small-text" value="<?php echo esc_attr( $st['radius'] ); ?>" placeholder="0"> px</td></tr>
+				<tr><th scope="row">Wording when closed</th><td><input name="style[closed]" class="large-text" value="<?php echo esc_attr( $st['closed'] ); ?>"></td></tr>
+				<tr><th scope="row">Wording for holiday hours</th><td><input name="style[special]" class="large-text" value="<?php echo esc_attr( $st['special'] ); ?>">
+					<p class="description"><code>{who}</code> is "Our Springfield office" on a location's pages and "Our offices" on Corporate pages. <code>{date}</code> "Thursday, November 26", <code>{label}</code> the holiday's name, <code>{hours}</code> its hours.</p></td></tr>
+				<tr><th scope="row">Preview</th><td>
+					<div class="smc-closure-notice smc-n-preview" style="<?php echo esc_attr( self::notice_style( $st, $map ) ); ?>" data-who="<?php echo esc_attr( $who ); ?>" data-date="<?php echo esc_attr( self::date_text( $sample ) ); ?>"><p><?php echo esc_html( $text ); ?></p></div>
+					<p class="description">Fonts come from the site, so the text looks slightly different here.</p>
+				</td></tr>
+			</table>
+			<?php submit_button( 'Save closure notice', 'primary', 'submit', true ); ?>
+		</form>
+		<style>
+			.smc-n-preview { max-width: 700px; padding: 12px 16px; border-left: 4px solid <?php echo esc_html( $map['primary'] ?? '#2271b1' ); ?>; background: rgba(0,0,0,.04); }
+			.smc-n-preview p { margin: 0; color: inherit; font-size: 15px; }
+		</style>
+		<script>
+		( function () {
+			var form = document.querySelector( '.smc-n-form' ).closest( 'form' ), box = form.querySelector( '.smc-n-preview' );
+			function color( name ) {
+				var sel = form.querySelector( '[name="style[' + name + '][g]"]' ), hex = form.querySelector( '[name="style[' + name + '][hex]"]' );
+				hex.style.display = 'custom' === sel.value ? '' : 'none';
+				if ( 'custom' === sel.value ) { return hex.value; }
+				if ( 'none' === sel.value ) { return 'none'; }
+				var o = sel.options[ sel.selectedIndex ];
+				return o.getAttribute( 'data-color' ) || '';
+			}
+			function sides( v ) { v = ( v || '' ).trim(); return v && /^[\d.\s,]+$/.test( v ) ? v.split( /[\s,]+/ ).map( function ( n ) { return n + 'px'; } ).join( ' ' ) : ''; }
+			function val( n ) { return form.querySelector( '[name="style[' + n + ']"]' ).value; }
+			function update() {
+				var s = box.style, bc = color( 'border' ), side = val( 'border_side' ), w = ( val( 'border_width' ) || '4' ) + 'px';
+				s.cssText = '';
+				if ( val( 'align' ) ) { s.textAlign = val( 'align' ); }
+				if ( sides( val( 'padding' ) ) ) { s.padding = sides( val( 'padding' ) ); }
+				if ( color( 'background' ) ) { s.background = color( 'background' ); }
+				if ( color( 'color' ) ) { s.color = color( 'color' ); }
+				if ( 'none' === bc || 'none' === side ) { s.border = '0'; }
+				else {
+					s.border = '0';
+					var c = bc || '<?php echo esc_js( $map['primary'] ?? '#2271b1' ); ?>';
+					( 'all' === side ? [ 'Top', 'Right', 'Bottom', 'Left' ] : [ side.charAt( 0 ).toUpperCase() + side.slice( 1 ) ] ).forEach( function ( sd ) { s[ 'border' + sd ] = w + ' solid ' + c; } );
+				}
+				if ( sides( val( 'radius' ) ) ) { s.borderRadius = sides( val( 'radius' ) ); }
+				box.querySelector( 'p' ).textContent = val( 'closed' ).split( '{who}' ).join( box.getAttribute( 'data-who' ) ).split( '{date}' ).join( box.getAttribute( 'data-date' ) ).split( '{label}' ).join( 'Thanksgiving' ).split( '{hours}' ).join( '' );
+			}
+			form.addEventListener( 'input', update );
+			form.addEventListener( 'change', update );
+			update();
+		} )();
+		</script>
+		<?php
+	}
+
 	private static function row( $i, array $e, array $locs, $past ) {
 		$n = "h[$i]";
 		?>
@@ -377,19 +558,91 @@ class SMC_Location_Holidays {
 	/**
 	 * [location_closure_notice days="14"] - a notice for closures starting within 14 days
 	 * (and during them). Shows nothing the rest of the year.
+	 *
+	 * Look (all optional):
+	 *   align="left|center|right"
+	 *   padding="12 16"          px, like CSS (1 to 4 numbers)
+	 *   background="#fff4e5"     hex, or a global color: primary, secondary, text, accent or a custom color's ID
+	 *   color="#1d2327"          text color, same choices
+	 *   border="primary"         border color, same choices, or "none"
+	 *   border_side="left"       left, top, bottom, all
+	 *   border_width="4"         px
+	 *   radius="6"               px
 	 */
 	public static function notice_shortcode( $atts ) {
-		$a     = self::atts( $atts, 'location_closure_notice', [ 'days' => 14 ] );
+		$a     = self::atts( $atts, 'location_closure_notice', self::style() );
 		$tid   = SMC_Location_Fields::listing_location_id( $a['location'] );
 		$items = self::items( self::upcoming( $tid ), self::who( $tid, $a ), $a );
 		if ( ! $items ) {
 			return '';
 		}
-		$html = '<div class="smc-closure-notice" role="status" data-days="' . (int) $a['days'] . '">';
+		$style = self::notice_style( $a );
+		$html  = '<div class="smc-closure-notice" role="status" data-days="' . (int) $a['days'] . '"' . ( '' !== $style ? ' style="' . esc_attr( $style ) . '"' : '' ) . '>';
 		foreach ( $items as $i ) {
 			$html .= '<p data-from="' . esc_attr( $i['from'] ) . '" data-to="' . esc_attr( $i['to'] ) . '" hidden>' . esc_html( $i['text'] ) . '</p>';
 		}
 		return $html . '</div>' . self::script();
+	}
+
+	/** "#abc", "rgb(...)" or a global color ID ("primary") -> a CSS color. "" if it isn't one. */
+	private static function css_color( $v, array $map = [] ) {
+		$v = trim( (string) $v );
+		if ( isset( $map[ $v ] ) && '' !== $map[ $v ] ) {
+			return $map[ $v ]; // Admin preview: real color instead of Elementor's CSS variable.
+		}
+		$v = strtolower( $v );
+		if ( preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/', $v ) || preg_match( '/^(rgb|rgba|hsl|hsla)\([\d\s.,%]+\)$/', $v ) || in_array( $v, [ 'transparent', 'white', 'black' ], true ) ) {
+			return $v;
+		}
+		if ( preg_match( '/^[a-z0-9_-]{2,40}$/', $v ) ) {
+			return 'var(--e-global-color-' . $v . ')'; // Elementor global color by ID.
+		}
+		return '';
+	}
+
+	/** "12 16" -> "12px 16px". "" if it isn't 1 to 4 numbers. */
+	private static function css_sides( $v ) {
+		$n = preg_split( '/[\s,]+/', trim( (string) $v ) );
+		if ( ! $n || count( $n ) > 4 || array_filter( $n, fn( $x ) => ! is_numeric( $x ) ) ) {
+			return '';
+		}
+		return implode( ' ', array_map( fn( $x ) => (float) $x . 'px', $n ) );
+	}
+
+	/** Inline style for the notice from its look options. Only what was set; the rest keeps the default look. */
+	private static function notice_style( array $a, array $map = [] ) {
+		$css = [];
+		if ( in_array( $a['align'], [ 'left', 'center', 'right' ], true ) ) {
+			$css[] = 'text-align:' . $a['align'];
+		}
+		if ( '' !== trim( $a['padding'] ) && ( $p = self::css_sides( $a['padding'] ) ) ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition
+			$css[] = 'padding:' . $p;
+		}
+		if ( '' !== trim( $a['background'] ) && ( $c = self::css_color( $a['background'], $map ) ) ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition
+			$css[] = 'background:' . $c;
+		}
+		if ( '' !== trim( $a['color'] ) && ( $c = self::css_color( $a['color'], $map ) ) ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition
+			$css[] = 'color:' . $c;
+		}
+		$border = strtolower( trim( $a['border'] ) );
+		$side   = strtolower( trim( $a['border_side'] ) );
+		$width  = is_numeric( $a['border_width'] ) ? (float) $a['border_width'] : null;
+		if ( 'none' === $border || 'none' === $side ) {
+			$css[] = 'border:0';
+		} elseif ( '' !== $border || null !== $width || 'left' !== $side ) {
+			$color = '' !== $border ? self::css_color( $a['border'], $map ) : '';
+			$color = $color ?: 'var(--e-global-color-primary,#2271b1)';
+			$w     = ( null !== $width ? $width : 4 ) . 'px';
+			$css[] = 'border:0';
+			$sides = 'all' === $side ? [ 'top', 'right', 'bottom', 'left' ] : [ in_array( $side, [ 'top', 'bottom', 'right' ], true ) ? $side : 'left' ];
+			foreach ( $sides as $sd ) {
+				$css[] = "border-$sd:$w solid $color";
+			}
+		}
+		if ( '' !== trim( $a['radius'] ) && ( $r = self::css_sides( $a['radius'] ) ) ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition
+			$css[] = 'border-radius:' . $r;
+		}
+		return implode( ';', $css );
 	}
 
 	/**
@@ -418,7 +671,7 @@ class SMC_Location_Holidays {
 		}
 		$done = true;
 		return <<<'HTML'
-<style>.smc-closure-notice{padding:12px 16px;border-left:4px solid var(--e-global-color-primary,#2271b1);background:rgba(0,0,0,.04);margin:0 0 16px}.smc-closure-notice p{margin:0}.smc-closure-notice p+p{margin-top:6px}.smc-closure-notice.is-empty{display:none}.smc-holidays-list{margin:0;padding-left:1.2em}</style>
+<style>.smc-closure-notice{padding:12px 16px;border-left:4px solid var(--e-global-color-primary,#2271b1);background:rgba(0,0,0,.04);margin:0 0 16px}.smc-closure-notice p{margin:0;color:inherit}.smc-closure-notice p+p{margin-top:6px}.smc-closure-notice.is-empty{display:none}.smc-holidays-list{margin:0;padding-left:1.2em}</style>
 <script>
 ( function () {
 	function run() {
