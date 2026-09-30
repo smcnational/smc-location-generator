@@ -224,7 +224,7 @@ class SMC_Location_Yoast {
 	}
 
 	/** Yoast keeps its own copy of each page's SEO fields (indexables), so rebuild it after a direct meta change. */
-	private static function rebuild_indexable( $id ) {
+	public static function rebuild_indexable( $id ) {
 		try {
 			if ( function_exists( 'YoastSEO' ) && class_exists( '\Yoast\WP\SEO\Builders\Indexable_Builder' ) ) {
 				$repo      = YoastSEO()->classes->get( \Yoast\WP\SEO\Repositories\Indexable_Repository::class );

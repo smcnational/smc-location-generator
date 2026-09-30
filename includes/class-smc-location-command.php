@@ -449,6 +449,69 @@ class SMC_Location_Command {
 		$rows ? WP_CLI\Utils\format_items( 'table', $rows, [ 'from', 'to', 'same', 'why', 'used' ] ) : WP_CLI::log( 'No redirects.' );
 	}
 
+	/**
+	 * Single-location build: turns the template's demo location into the client's practice.
+	 * Shows a preview; builds after you confirm.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <file>
+	 * : JSON with practice, city, state, phone, street, city_state_zip and optional email,
+	 * domain, booking_link, form, map, hours, social, doctors, replace, slug, location,
+	 * practice_from, domain_from (the same fields as Locations > New Build).
+	 *
+	 * [--yes]
+	 * : Build without asking.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp smc location build client.json
+	 */
+	public function build( $args, $assoc ) {
+		$json = file_get_contents( $args[0] ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		$cfg  = json_decode( (string) $json, true );
+		if ( ! is_array( $cfg ) ) {
+			WP_CLI::error( "{$args[0]} isn't valid JSON." );
+		}
+		if ( isset( $cfg['doctors'] ) && is_array( $cfg['doctors'] ) ) {
+			$cfg['doctors'] = array_map( fn( $x ) => is_array( $x ) ? trim( ( $x['name'] ?? '' ) . ( ! empty( $x['credentials'] ) ? ', ' . $x['credentials'] : '' ) ) : (string) $x, $cfg['doctors'] );
+		}
+		try {
+			$r = ( new SMC_Location_Builder( $cfg, true ) )->run();
+		} catch ( Exception $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		WP_CLI\Utils\format_items( 'table', array_map( fn( $x ) => [ 'item' => $x[0], 'template' => $x[1], 'becomes' => $x[2] ], $r['summary'] ), [ 'item', 'template', 'becomes' ] );
+		foreach ( $r['warnings'] as $w ) {
+			WP_CLI::warning( $w );
+		}
+		WP_CLI::log( "{$r['changed']} item(s) will be updated." );
+		WP_CLI::confirm( 'Build the site?', $assoc );
+		try {
+			$r = ( new SMC_Location_Builder( $cfg, false ) )->run();
+		} catch ( Exception $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+		foreach ( $r['leftovers'] as $l ) {
+			WP_CLI::warning( "Demo text \"{$l['value']}\" still in {$l['type']} #{$l['id']} ({$l['title']})" );
+		}
+		WP_CLI::success( "Built. {$r['changed']} item(s) updated. Undo with: wp smc location build-undo" );
+	}
+
+	/**
+	 * Undoes the single-location build.
+	 *
+	 * @subcommand build-undo
+	 */
+	public function build_undo( $args, $assoc ) {
+		WP_CLI::confirm( 'Put the site back to the template?', $assoc );
+		try {
+			WP_CLI::success( SMC_Location_Builder::undo() . ' item(s) restored.' );
+		} catch ( Exception $e ) {
+			WP_CLI::error( $e->getMessage() );
+		}
+	}
+
 	private function launch_term( $slug ) {
 		$term = get_term_by( 'slug', sanitize_title( $slug ), 'location_category' );
 		if ( ! $term ) {

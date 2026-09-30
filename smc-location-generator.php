@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: SMC Locations
- * Description: SMC location tools: Site Setup for single-location builds, plus multi-location tools. Adds hours, social links and a Google Map to each location, with [location_hours], [location_social] and [location_map] shortcodes. Manage locations from the Locations menu in wp-admin, or add them with "wp smc location".
+ * Description: SMC multi-location tools. Adds hours, social links and a Google Map to each location, with [location_hours], [location_social] and [location_map] shortcodes. Manage locations from the Locations menu in wp-admin, or add them with "wp smc location".
  * Version:     1.29.0-beta.1
  * Author:      SMC National
  * Requires PHP: 7.4
@@ -16,6 +16,7 @@ require_once __DIR__ . '/includes/class-smc-location-core.php';
 require_once __DIR__ . '/includes/class-smc-location-settings.php';
 require_once __DIR__ . '/includes/class-smc-location-fields.php';
 require_once __DIR__ . '/includes/class-smc-location-cloner.php';
+require_once __DIR__ . '/includes/class-smc-location-builder.php';
 require_once __DIR__ . '/includes/class-smc-location-reviews.php';
 require_once __DIR__ . '/includes/class-smc-location-team.php';
 require_once __DIR__ . '/includes/class-smc-location-brand.php';
@@ -28,7 +29,6 @@ require_once __DIR__ . '/includes/class-smc-location-schema.php';
 require_once __DIR__ . '/includes/class-smc-location-holidays.php';
 require_once __DIR__ . '/includes/class-smc-location-updater.php';
 require_once __DIR__ . '/includes/class-smc-location-transfer.php';
-require_once __DIR__ . '/includes/class-smc-site-setup.php';
 
 SMC_Location_Core::init();
 SMC_Location_Fields::init();
@@ -45,8 +45,6 @@ SMC_Location_Updater::init();
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/class-smc-location-admin.php';
 	new SMC_Location_Manager();
-	require_once __DIR__ . '/includes/class-smc-site-setup-page.php';
-	new SMC_Site_Setup_Page();
 	new SMC_Location_Admin();
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
 	require_once __DIR__ . '/includes/class-smc-location-scan-page.php';
@@ -56,6 +54,8 @@ if ( is_admin() ) {
 	new SMC_Location_Brand();
 	require_once __DIR__ . '/includes/class-smc-location-transfer-page.php';
 	new SMC_Location_Transfer_Page();
+	require_once __DIR__ . '/includes/class-smc-location-build-page.php';
+	SMC_Location_Build_Page::init();
 	SMC_Location_Settings::init();
 }
 
@@ -63,6 +63,4 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
 	require_once __DIR__ . '/includes/class-smc-location-command.php';
 	WP_CLI::add_command( 'smc location', 'SMC_Location_Command' );
-	require_once __DIR__ . '/includes/class-smc-site-command.php';
-	WP_CLI::add_command( 'smc site', 'SMC_Site_Command' );
 }

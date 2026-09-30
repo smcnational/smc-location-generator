@@ -1,6 +1,6 @@
 # SMC Locations
 
-Sets up single-location client sites from a starter template (see Site Setup below), and adds a new location to an SMC multi-location site by cloning an existing location. It copies:
+Adds a new location to an SMC multi-location site by cloning an existing location. It copies:
 
 - **Pages:** the location's page tree, minus landing pages and nearby-city pages.
 - **Location terms:** the `location_category` term with all its fields, and the location's `page_type` term.
@@ -10,41 +10,6 @@ Sets up single-location client sites from a starter template (see Site Setup bel
 The city name, phone, and address are swapped everywhere. Every run is logged, so it can be undone.
 
 Requires Elementor Pro and the SMC `[location]` system (the `location_category` taxonomy with ACF fields). Everything lives under the **Locations** menu in the wp-admin sidebar. Adding locations also works with `wp smc location` in WP-CLI; both do the same thing, and each can undo the other's clones.
-
-## Site Setup (single-location builds)
-
-**Locations > Site Setup** turns a starter template into a single-location client site in place. Nothing is cloned; pages stay at the root (`/services/`).
-
-1. **Intake:** fill in the form, or load an intake file (**Download a blank intake file** gives one with this starter's values and service pages already listed):
-   - **Practice:** site title, practice name (Yoast's organization name, used by `[brand_name]` and the schema) and tagline.
-   - **Location:** city and state, street, zip, phone, email, booking button, embedded form, Google Map, hours and social links. Blank fields keep the starter's value (shown in grey).
-   - **Doctors:** one per line, `Dr. Jane Lee | DDS | General Dentist`. They're added under **Locations > Team** for the location; add photos and bios there.
-   - **Services:** untick services the practice doesn't offer. They're set to draft, along with the pages under them, and taken out of menus. Buttons or links to them are listed so you can remove them.
-   - **Starter values:** what the starter uses now, read from its location, or from the content when the starter has details typed in (the phone number typed most often). Correct any that are wrong.
-   - **Extra replacements:** anything else typed in, `old => new`, e.g. a placeholder doctor. **Never change** protects strings like a street that shares the starter's city name.
-   - **Options:** rename page URLs that contain the starter's city (`/dentist-springfield/` to `/dentist-shelbyville/`, links included), and tie every page to the location so `[location]` shortcodes, schema and Yoast variables work everywhere.
-2. **Preview** shows every replacement, location field, site setting, page, template and menu item that will change. Nothing changes yet.
-3. **Apply.** The starter's city, phone (every format, including `tel:` links), street, city/state/zip, email, booking link and name are swapped in pages, posts, Theme Builder templates, popups, menus and Yoast fields. Media paths are never changed. The starter's name in the copy becomes the practice name.
-
-Starter pages whose URL changes don't get 301 redirects, since they were never live.
-
-**Build checklist** (top of the screen): setup status, starter values still in the content, the location's details, pages without a location, typed-in details (from **Scan**), logo, favicon, brand, doctors, reviews, Yoast, search visibility, and manual items (forms tested, desktop and mobile review, analytics, legal pages, domain). Red blocks launch, amber is worth a look.
-
-**Run it again** to fix things: it keeps the first backup. **Undo setup** puts the site back to the starter exactly (content, URLs, menus, location, site title; removes the doctors it added). **Finalize** keeps the setup and deletes the backups.
-
-Sites with more than one location use **Add Location** and each location's launch checklist instead.
-
-From WP-CLI:
-
-```bash
-wp smc site init                          # writes site-setup.json with the starter's values
-nano site-setup.json                      # fill it in; services.remove takes paths from _services_available
-wp smc site setup site-setup.json --dry-run
-wp smc site setup site-setup.json         # shows the plan, then asks
-wp smc site checklist
-wp smc site undo
-wp smc site finalize
-```
 
 ## Hours, social links and map
 
@@ -248,6 +213,25 @@ Each location's edit screen shows its schema and links to Google's Rich Results 
 - Each location's schema includes its holidays as special opening hours (`validFrom` / `validThrough`), which Google can show as holiday hours.
 - The notice, the list and the locations list decide what to show in the visitor's browser, so they're right even on cached pages.
 - Holidays are included in Export / Import (with Settings). Locations are matched by slug. **Remove past holidays** tidies the list.
+
+## New Build (single-location sites)
+
+A single-location site is a site with one location. **Locations > New Build** turns a template site's demo location into the client's practice in one step. For more offices later, use Add Location as usual.
+
+**The template** needs one demo location (Locations > All Locations) with its details filled in, e.g. Springfield, ST, 555-555-0100, 123 Main St, and a demo practice name as its site title. The more the template's pages use `[location]` shortcodes, the less there is to swap, but typed-in demo text is swapped too.
+
+**Intake:** practice name, domain, doctors (one per line, `Dr. Jane Lee, DDS`), city, state, phone, street, city/state/zip, email, booking link, embedded form, Google Map, URL slug, hours, social links and extra replacements. **Load from a file** fills the form from JSON with the same fields (a clone config works too).
+
+**Preview** shows what changes and where, without changing anything. **Build the site** then:
+- swaps the demo practice name, domain, email, city (including URL slugs), city and state, street, city/state/zip, zip and phone (every format) for the client's, across all pages, posts, Elementor templates, headers, footers, popups, menus and their Yoast fields. Media file paths are never touched.
+- fills in the location's details and renames it (e.g. Springfield to Marion, `/springfield/` to `/marion/`), so every `[location]` shortcode shows the client's details.
+- sets the site title, and the organization name in Yoast.
+- adds the doctors to Locations > Team and drafts the demo team.
+- lists anything that still shows demo text afterwards, with a link to fix it.
+
+**Undo the build** puts every changed item, the location, the site title and the team back exactly as the template had them. Backups are kept on each item. One build per site; undo to run it again.
+
+From SSH: `wp smc location build client.json` (shows the preview, then asks) and `wp smc location build-undo`.
 
 ## Reviews
 
