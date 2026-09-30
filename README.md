@@ -227,7 +227,15 @@ A single-location site is a site with one location. **Locations > New Build** tu
 - fills in the location's details and renames it (e.g. Springfield to Marion, `/springfield/` to `/marion/`), so every `[location]` shortcode shows the client's details.
 - sets the site title, and the organization name in Yoast.
 - adds the doctors to Locations > Team and drafts the demo team.
+- sets the services the practice doesn't offer to draft and hides their menu items (see below).
+- writes Yoast titles and descriptions from patterns (see below).
 - lists anything that still shows demo text afterwards, with a link to fix it.
+
+**Services:** every page under a page with the slug `services` (e.g. `/services/` or `/springfield/services/`) is listed as a checkbox, all ticked. Untick what the practice doesn't offer; unticking a service unticks the pages under it. Unticked services are set to draft and their menu items (and any under them) hidden. The preview lists pages that still link to a removed service, like a services grid on the homepage, so those links can be taken out. In a JSON file, `"services": ["Implants", "Veneers"]` lists the ones to keep (by title or slug).
+
+**SEO patterns:** a title and description for the homepage, service pages and all other pages, e.g. `{service} in {city}, {state} {sep} {practice}`. Tokens are `{service}`/`{page}`, `{practice}`, `{city}`, `{state}`, `{city_state}`, `{phone}` and `{sep}`, saved as Yoast variables (`%%title%%`, `%%location_city%%`...) so they stay right when details change. The homepage and service patterns are set on each of those pages; the other-pages pattern becomes Yoast's default for pages, and pages' own titles are cleared so it applies. Blank keeps the template's. In JSON: `"seo": { "service_title": "...", "service_desc": "...", "home_title": "...", "home_desc": "...", "page_title": "...", "page_desc": "..." }`.
+
+**Single-location sites:** pages with no location (services, blog, about...) use the site's only location for `[location]` shortcodes, the Yoast location variables and the schema. Sites with more than one location aren't affected.
 
 **Undo the build** puts every changed item, the location, the site title and the team back exactly as the template had them. Backups are kept on each item. One build per site; undo to run it again.
 

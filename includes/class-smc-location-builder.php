@@ -40,7 +40,21 @@ class SMC_Location_Builder {
 	private $from    = [];
 	private $to      = [];
 
-	public $report = [ 'summary' => [], 'items' => [], 'terms' => [], 'fields' => [], 'team' => [], 'warnings' => [], 'leftovers' => [], 'changed' => 0 ];
+	public $report = [ 'summary' => [], 'items' => [], 'terms' => [], 'fields' => [], 'team' => [], 'warnings' => [], 'leftovers' => [], 'changed' => 0, 'removed' => [], 'menu_hidden' => 0, 'links' => [], 'seo' => [] ];
+
+	/** Tokens for SEO patterns and the Yoast variables they become (so titles stay in sync). */
+	const TOKENS = [
+		'{service}'    => '%%title%%',
+		'{page}'       => '%%title%%',
+		'{practice}'   => '%%sitename%%',
+		'{city}'       => '%%location_city%%',
+		'{state}'      => '%%location_state%%',
+		'{city_state}' => '%%location_city_state%%',
+		'{phone}'      => '%%location_phone%%',
+		'{sep}'        => '%%sep%%',
+	];
+
+	private $log = null;
 
 	public function __construct( array $cfg, $dry = true ) {
 		$this->cfg = $cfg;
@@ -159,6 +173,9 @@ class SMC_Location_Builder {
 		$this->update_terms( $log );
 		$this->update_options( $log );
 		$this->update_team( $log );
+		$this->log = &$log;
+		$this->prune();
+		$this->seo();
 
 		if ( ! $this->dry ) {
 			update_option( self::LOG, $log, false );
@@ -481,6 +498,211 @@ class SMC_Location_Builder {
 		}
 	}
 
+	/* ========== Backups for status and SEO changes ========== */
+
+	/** Backs up post fields and meta (raw, null = didn't exist) before a change, once per build. */
+	private function backup( $id, array $post_fields = [], array $meta_keys = [] ) {
+		global $wpdb;
+		$b = get_post_meta( $id, self::BACKUP, true );
+		$b = is_array( $b ) ? $b : [ 'post' => [], 'meta' => [] ];
+		$p = get_post( $id );
+		foreach ( $post_fields as $f ) {
+			if ( ! array_key_exists( $f, $b['post'] ) ) {
+				$b['post'][ $f ] = $p->$f;
+			}
+		}
+		foreach ( $meta_keys as $k ) {
+			if ( ! array_key_exists( $k, $b['meta'] ) ) {
+				$b['meta'][ $k ] = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s LIMIT 1", $id, $k ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			}
+		}
+		update_post_meta( $id, self::BACKUP, wp_slash( $b ) );
+		if ( ! in_array( $id, $this->log['posts'], true ) ) {
+			$this->log['posts'][] = $id;
+		}
+	}
+
+	/* ========== Services ========== */
+
+	/**
+	 * Service pages: everything under a page with the slug "services" (at any level, e.g.
+	 * /services/ or /springfield/services/), as [ id, title, parent, depth, path ].
+	 */
+	public static function services() {
+		$roots = get_posts( [ 'post_type' => 'page', 'name' => 'services', 'post_status' => [ 'publish', 'draft', 'pending', 'private' ], 'numberposts' => -1 ] );
+		$out   = [];
+		$walk  = function ( $parent, $depth ) use ( &$walk, &$out ) {
+			foreach ( get_pages( [ 'parent' => $parent, 'post_status' => 'publish,draft,pending,private', 'sort_column' => 'menu_order,post_title' ] ) as $p ) {
+				$out[] = [ 'id' => $p->ID, 'title' => $p->post_title, 'parent' => (int) $p->post_parent, 'depth' => $depth, 'path' => get_page_uri( $p ), 'status' => $p->post_status ];
+				$walk( $p->ID, $depth + 1 );
+			}
+		};
+		foreach ( $roots as $r ) {
+			$walk( $r->ID, 0 );
+		}
+		return $out;
+	}
+
+	/** Service page IDs to remove, from "keep" (IDs) or "services" (names or slugs to keep). */
+	private function removals() {
+		$all = self::services();
+		if ( ! $all || ( ! isset( $this->cfg['keep'] ) && ! isset( $this->cfg['services'] ) ) ) {
+			return [];
+		}
+		$by   = array_column( $all, null, 'id' );
+		$keep = [];
+		if ( isset( $this->cfg['keep'] ) ) {
+			$keep = array_map( 'intval', (array) $this->cfg['keep'] );
+		} else {
+			$want = array_map( fn( $x ) => sanitize_title( (string) $x ), (array) $this->cfg['services'] );
+			foreach ( $all as $sv ) {
+				if ( in_array( sanitize_title( $sv['title'] ), $want, true ) || in_array( basename( $sv['path'] ), $want, true ) ) {
+					$keep[] = $sv['id'];
+				}
+			}
+		}
+		// A kept service keeps the pages above it.
+		foreach ( $keep as $id ) {
+			for ( $p = $by[ $id ]['parent'] ?? 0; isset( $by[ $p ] ); $p = $by[ $p ]['parent'] ) {
+				$keep[] = $p;
+			}
+		}
+		$remove = array_values( array_diff( array_keys( $by ), $keep ) );
+		// Only published pages need removing; drafts are already off the site.
+		return array_values( array_filter( $remove, fn( $id ) => 'publish' === $by[ $id ]['status'] ) );
+	}
+
+	/** Drafts the services the practice doesn't offer and hides their menu items. */
+	private function prune() {
+		global $wpdb;
+		$remove = $this->removals();
+		if ( ! $remove ) {
+			return;
+		}
+		foreach ( $remove as $id ) {
+			$this->report['removed'][] = [ 'id' => $id, 'title' => get_the_title( $id ), 'path' => '/' . get_page_uri( $id ) . '/' ];
+		}
+
+		// Menu items linking to them, and any items under those.
+		$items = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} o ON o.post_id = p.ID AND o.meta_key = '_menu_item_object_id'
+			JOIN {$wpdb->postmeta} t ON t.post_id = p.ID AND t.meta_key = '_menu_item_type' AND t.meta_value = 'post_type'
+			WHERE p.post_type = 'nav_menu_item' AND p.post_status = 'publish' AND o.meta_value IN (" . implode( ',', array_map( 'intval', $remove ) ) . ')'
+		);
+		$items = array_map( 'intval', $items );
+		for ( $i = 0; $i < count( $items ); $i++ ) { // phpcs:ignore Generic.CodeAnalysis.ForLoopWithTestFunctionCall
+			foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_menu_item_menu_item_parent' AND meta_value = %s", (string) $items[ $i ] ) ) as $child ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				if ( ! in_array( (int) $child, $items, true ) ) {
+					$items[] = (int) $child;
+				}
+			}
+		}
+		$this->report['menu_hidden'] = count( $items );
+
+		// Links to them left in other pages (after the swap, so with the new URLs).
+		$paths = [];
+		foreach ( $remove as $id ) {
+			$n       = 0;
+			$paths[] = '/' . trim( $this->swap( get_page_uri( $id ), $n ), '/' ) . '/';
+		}
+		$this->report['links'] = $this->links_to( $paths, $remove );
+
+		if ( $this->dry ) {
+			return;
+		}
+		foreach ( array_merge( $remove, $items ) as $id ) {
+			$this->backup( $id, [ 'post_status' ] );
+			$wpdb->update( $wpdb->posts, [ 'post_status' => 'draft' ], [ 'ID' => $id ] ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			clean_post_cache( $id );
+		}
+		$this->log['removed'] = $remove;
+	}
+
+	/** Published pages and templates that link to any of $paths, as [ title, count ]. */
+	private function links_to( array $paths, array $skip ) {
+		$out = [];
+		foreach ( get_posts( [ 'post_type' => [ 'page', 'post', 'elementor_library' ], 'post_status' => 'publish', 'numberposts' => -1, 'exclude' => $skip ] ) as $p ) {
+			$n    = 0;
+			$text = $this->swap( str_replace( '\/', '/', $p->post_content . ' ' . (string) get_post_meta( $p->ID, '_elementor_data', true ) ), $n );
+			$hits = 0;
+			foreach ( $paths as $path ) {
+				$hits += substr_count( $text, $path );
+			}
+			if ( $hits ) {
+				$n2    = 0;
+				$out[] = [ 'id' => $p->ID, 'title' => $this->swap( $p->post_title, $n2 ), 'count' => $hits ];
+			}
+		}
+		return $out;
+	}
+
+	/* ========== SEO patterns ========== */
+
+	/** "{service} in {city} | {practice}" -> "%%title%% in %%location_city%% | %%sitename%%". */
+	public static function tokens( $pattern ) {
+		return strtr( trim( (string) $pattern ), self::TOKENS );
+	}
+
+	/**
+	 * Yoast titles and descriptions from patterns: the homepage, service pages, and every other
+	 * page (as Yoast's default for pages, clearing pages' own titles so the default applies).
+	 */
+	private function seo() {
+		$seo = array_map( 'trim', (array) ( $this->cfg['seo'] ?? [] ) );
+		if ( ! array_filter( $seo ) ) {
+			return;
+		}
+		$front    = 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0;
+		$removed  = (array) ( $this->log['removed'] ?? array_column( $this->report['removed'], 'id' ) );
+		$services = array_diff( array_column( array_filter( self::services(), fn( $s ) => 'publish' === $s['status'] ), 'id' ), $removed );
+		$groups   = [
+			'home'    => [ $front ? [ $front ] : [], 'Homepage' ],
+			'service' => [ $services, 'Service pages' ],
+		];
+		foreach ( $groups as $g => [ $ids, $label ] ) {
+			foreach ( [ 'title' => 'title', 'desc' => 'metadesc' ] as $k => $field ) {
+				$pattern = $seo[ "{$g}_$k" ] ?? '';
+				if ( '' === $pattern || ! $ids ) {
+					continue;
+				}
+				$this->report['seo'][] = [ "$label " . ( 'title' === $k ? 'title' : 'description' ), $pattern, count( $ids ) ];
+				if ( $this->dry ) {
+					continue;
+				}
+				foreach ( $ids as $id ) {
+					$this->backup( $id, [], [ "_yoast_wpseo_$field" ] );
+					update_post_meta( $id, "_yoast_wpseo_$field", wp_slash( self::tokens( $pattern ) ) );
+				}
+			}
+		}
+		// Every other page: Yoast's default for pages, with pages' own titles cleared.
+		$others = get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'fields' => 'ids', 'exclude' => array_merge( $front ? [ $front ] : [], $services, $removed ) ] );
+		foreach ( [ 'title' => [ 'title-page', 'title' ], 'desc' => [ 'metadesc-page', 'metadesc' ] ] as $k => [ $opt, $field ] ) {
+			$pattern = $seo[ "page_$k" ] ?? '';
+			if ( '' === $pattern ) {
+				continue;
+			}
+			$this->report['seo'][] = [ 'Other pages ' . ( 'title' === $k ? 'title' : 'description' ), $pattern, count( $others ) ];
+			if ( $this->dry ) {
+				continue;
+			}
+			$titles = get_option( 'wpseo_titles' );
+			if ( is_array( $titles ) ) {
+				if ( ! isset( $this->log['options']['wpseo_titles'] ) ) {
+					$this->log['options']['wpseo_titles'] = $titles;
+				}
+				$titles[ $opt ] = self::tokens( $pattern );
+				update_option( 'wpseo_titles', $titles );
+			}
+			foreach ( $others as $id ) {
+				if ( '' !== (string) get_post_meta( $id, "_yoast_wpseo_$field", true ) ) {
+					$this->backup( $id, [], [ "_yoast_wpseo_$field" ] );
+					delete_post_meta( $id, "_yoast_wpseo_$field" );
+				}
+			}
+		}
+	}
+
 	/* ========== After the build ========== */
 
 	private function leftover_values() {
@@ -534,8 +756,12 @@ class SMC_Location_Builder {
 				$wpdb->update( $wpdb->posts, $b['post'], [ 'ID' => $id ] ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			}
 			foreach ( (array) $b['meta'] as $key => $raw ) {
-				// $raw is the value exactly as it was stored.
-				$wpdb->update( $wpdb->postmeta, [ 'meta_value' => $raw ], [ 'post_id' => $id, 'meta_key' => $key ] ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// $raw is the value exactly as it was stored; null means it didn't exist.
+				if ( null === $raw ) {
+					delete_post_meta( $id, $key );
+				} elseif ( ! $wpdb->update( $wpdb->postmeta, [ 'meta_value' => $raw ], [ 'post_id' => $id, 'meta_key' => $key ] ) && ! metadata_exists( 'post', $id, $key ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$wpdb->insert( $wpdb->postmeta, [ 'post_id' => $id, 'meta_key' => $key, 'meta_value' => $raw ] ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				}
 			}
 			delete_post_meta( $id, self::BACKUP );
 			wp_cache_delete( $id, 'post_meta' );

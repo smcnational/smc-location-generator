@@ -76,7 +76,7 @@ class SMC_Location_Yoast {
 			if ( ! is_wp_error( $ids ) && $ids ) {
 				return (int) $ids[0];
 			}
-			return 0;
+			return SMC_Location_Fields::only_location_id();
 		}
 		return SMC_Location_Fields::current_location_id();
 	}

@@ -500,7 +500,24 @@ class SMC_Location_Fields {
 		if ( ( is_wp_error( $ids ) || ! $ids ) && get_the_ID() && get_the_ID() !== $post_id ) {
 			$ids = wp_get_post_terms( get_the_ID(), self::TAX, [ 'fields' => 'ids' ] );
 		}
-		return ( ! is_wp_error( $ids ) && $ids ) ? (int) $ids[0] : 0;
+		return ( ! is_wp_error( $ids ) && $ids ) ? (int) $ids[0] : self::only_location_id();
+	}
+
+	/**
+	 * On a single-location site, its one location (not counting Corporate), so pages without
+	 * a location (services, blog...) still show the practice's details. 0 otherwise.
+	 */
+	public static function only_location_id() {
+		static $id = null;
+		if ( null === $id ) {
+			$id    = 0;
+			$terms = get_terms( [ 'taxonomy' => self::TAX, 'hide_empty' => false, 'fields' => 'id=>name' ] );
+			if ( ! is_wp_error( $terms ) ) {
+				$terms = array_filter( $terms, fn( $name, $tid ) => ! self::is_corporate( $tid ), ARRAY_FILTER_USE_BOTH );
+				$id    = 1 === count( $terms ) ? (int) array_key_first( $terms ) : 0;
+			}
+		}
+		return $id;
 	}
 
 	/**

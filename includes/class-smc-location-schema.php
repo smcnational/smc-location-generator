@@ -46,6 +46,9 @@ class SMC_Location_Schema {
 		}
 		$ids = wp_get_post_terms( get_queried_object_id(), self::TAX, [ 'fields' => 'ids' ] );
 		if ( is_wp_error( $ids ) || ! $ids ) {
+			$ids = array_filter( [ SMC_Location_Fields::only_location_id() ] ); // Single-location site: every page.
+		}
+		if ( ! $ids ) {
 			return null;
 		}
 		$t = get_term( (int) $ids[0], self::TAX );

@@ -45,6 +45,12 @@ class SMC_Location_Build_Page {
 		foreach ( array_keys( SMC_Location_Fields::SOCIAL ) as $k ) {
 			$cfg['social'][ $k ] = trim( sanitize_text_field( $p['social'][ $k ] ?? '' ) );
 		}
+		if ( ! empty( $p['services_shown'] ) ) {
+			$cfg['keep'] = array_map( 'intval', (array) ( $p['keep'] ?? [] ) );
+		}
+		foreach ( [ 'home_title', 'home_desc', 'service_title', 'service_desc', 'page_title', 'page_desc' ] as $k ) {
+			$cfg['seo'][ $k ] = trim( sanitize_text_field( $p['seo'][ $k ] ?? '' ) );
+		}
 		$cfg['replace'] = [];
 		foreach ( preg_split( '/\r?\n/', (string) ( $p['replace'] ?? '' ) ) as $line ) {
 			if ( false !== strpos( $line, '=>' ) ) {
@@ -167,6 +173,9 @@ class SMC_Location_Build_Page {
 		foreach ( (array) $r['warnings'] as $w ) {
 			echo '<div class="notice notice-warning"><p>' . esc_html( $w ) . '</p></div>';
 		}
+		if ( ! empty( $r['links'] ) ) {
+			echo '<div class="notice notice-warning"><p>Links to removed services are still on: ' . esc_html( implode( ', ', array_map( fn( $l ) => $l['title'], $r['links'] ) ) ) . '. Remove them from those pages.</p></div>';
+		}
 		if ( $r['leftovers'] ) {
 			echo '<h2>Still showing demo text</h2><p>These items still contain a demo value. Fix them by hand, or Undo, add the text to Extra replacements and build again.</p>';
 			echo '<table class="widefat striped"><thead><tr><th>Item</th><th>Type</th><th>Found</th><th>Where</th></tr></thead><tbody>';
@@ -211,6 +220,21 @@ class SMC_Location_Build_Page {
 					<?php foreach ( $r['terms'] as $t ) : ?><li><?php echo esc_html( "$t[0]: $t[1] > $t[2]" ); ?></li><?php endforeach; ?>
 					<?php foreach ( $r['team'] as $t ) : ?><li><?php echo esc_html( "$t[0]: $t[1]" ); ?></li><?php endforeach; ?>
 				</ul></details>
+			<?php endif; ?>
+			<?php if ( $r['removed'] ) : ?>
+				<h3>Services</h3>
+				<p><?php echo count( $r['removed'] ); ?> service page(s) will be set to draft and <?php echo (int) $r['menu_hidden']; ?> menu item(s) hidden:</p>
+				<ul class="ul-disc"><?php foreach ( $r['removed'] as $x ) : ?><li><?php echo esc_html( $x['title'] ); ?> <code><?php echo esc_html( $x['path'] ); ?></code></li><?php endforeach; ?></ul>
+				<?php if ( $r['links'] ) : ?>
+					<div class="notice notice-warning inline"><p>These pages still link to a removed service. Remove those links (a services grid, buttons...) after the build:</p>
+					<ul class="ul-disc"><?php foreach ( $r['links'] as $l ) : ?><li><?php echo esc_html( $l['title'] . ' (' . $l['count'] . ')' ); ?></li><?php endforeach; ?></ul></div>
+				<?php endif; ?>
+			<?php endif; ?>
+			<?php if ( $r['seo'] ) : ?>
+				<h3>SEO titles and descriptions</h3>
+				<table class="widefat striped"><thead><tr><th></th><th>Pattern</th><th>Pages</th></tr></thead><tbody>
+					<?php foreach ( $r['seo'] as $x ) : ?><tr><td><?php echo esc_html( $x[0] ); ?></td><td><code><?php echo esc_html( $x[1] ); ?></code></td><td><?php echo (int) $x[2]; ?></td></tr><?php endforeach; ?>
+				</tbody></table>
 			<?php endif; ?>
 			<form method="post" onsubmit="return confirm('Run the build? Undo is available afterwards.')">
 				<?php wp_nonce_field( 'smc_build' ); ?>
@@ -301,6 +325,9 @@ class SMC_Location_Build_Page {
 				<?php endforeach; ?>
 			</table>
 
+			<?php self::render_services(); ?>
+			<?php self::render_seo(); ?>
+
 			<h2>Extra replacements</h2>
 			<table class="form-table" role="presentation">
 				<tr><th><label for="replace">Also swap</label></th><td><textarea name="replace" id="replace" rows="4" class="large-text code" placeholder="Downtown Springfield => Downtown Shelbyville"><?php echo esc_textarea( $repl ); ?></textarea>
@@ -311,11 +338,83 @@ class SMC_Location_Build_Page {
 		<?php
 	}
 
+	private static function render_services() {
+		$all = SMC_Location_Builder::services();
+		if ( ! $all ) {
+			return;
+		}
+		$keep = isset( self::$cfg['keep'] ) ? array_map( 'intval', (array) self::$cfg['keep'] ) : null;
+		$want = isset( self::$cfg['services'] ) ? array_map( fn( $x ) => sanitize_title( (string) $x ), (array) self::$cfg['services'] ) : null;
+		?>
+		<h2>Services</h2>
+		<p class="description">Untick the services the practice doesn't offer. They're set to draft and taken out of the menus (undone with the build). Unticking a service unticks the pages under it.</p>
+		<input type="hidden" name="services_shown" value="1">
+		<p><button type="button" class="button-link" data-smc-all="1">Tick all</button> &middot; <button type="button" class="button-link" data-smc-all="0">Untick all</button></p>
+		<div class="smc-services">
+			<?php foreach ( $all as $sv ) : ?>
+				<?php
+				if ( null !== $keep ) {
+					$on = in_array( $sv['id'], $keep, true );
+				} elseif ( null !== $want ) {
+					$on = in_array( sanitize_title( $sv['title'] ), $want, true ) || in_array( basename( $sv['path'] ), $want, true );
+				} else {
+					$on = 'publish' === $sv['status'];
+				}
+				?>
+				<label style="margin-left:<?php echo (int) $sv['depth'] * 22; ?>px" class="<?php echo 'publish' === $sv['status'] ? '' : 'is-draft'; ?>">
+					<input type="checkbox" name="keep[]" value="<?php echo (int) $sv['id']; ?>" data-parent="<?php echo (int) $sv['parent']; ?>" <?php checked( $on ); ?>>
+					<?php echo esc_html( $sv['title'] ); ?><?php echo 'publish' === $sv['status'] ? '' : ' <span class="description">(already ' . esc_html( $sv['status'] ) . ')</span>'; ?>
+				</label>
+			<?php endforeach; ?>
+		</div>
+		<script>
+		( function () {
+			var box = document.querySelector( '.smc-services' );
+			var boxes = function () { return Array.prototype.slice.call( box.querySelectorAll( 'input' ) ); };
+			function kids( id ) { return boxes().filter( function ( b ) { return b.getAttribute( 'data-parent' ) === id; } ); }
+			function down( b ) { kids( b.value ).forEach( function ( k ) { k.checked = b.checked; down( k ); } ); }
+			function up( b ) { var p = box.querySelector( 'input[value="' + b.getAttribute( 'data-parent' ) + '"]' ); if ( p && b.checked ) { p.checked = true; up( p ); } }
+			box.addEventListener( 'change', function ( e ) { down( e.target ); up( e.target ); } );
+			document.querySelectorAll( '[data-smc-all]' ).forEach( function ( btn ) {
+				btn.addEventListener( 'click', function () { var on = '1' === btn.getAttribute( 'data-smc-all' ); boxes().forEach( function ( b ) { b.checked = on; } ); } );
+			} );
+		} )();
+		</script>
+		<?php
+	}
+
+	private static function render_seo() {
+		$seo = (array) ( self::$cfg['seo'] ?? [] );
+		$f   = function ( $k, $ph ) use ( $seo ) {
+			printf( '<input name="seo[%1$s]" id="seo_%1$s" class="large-text" value="%2$s" placeholder="%3$s">', esc_attr( $k ), esc_attr( (string) ( $seo[ $k ] ?? '' ) ), esc_attr( $ph ) );
+		};
+		?>
+		<h2>SEO titles and descriptions</h2>
+		<p class="description">Yoast titles and meta descriptions from patterns. Tokens: <code>{service}</code> or <code>{page}</code> (the page's title), <code>{practice}</code>, <code>{city}</code>, <code>{state}</code>, <code>{city_state}</code>, <code>{phone}</code>, <code>{sep}</code> (Yoast's separator). They're saved as Yoast variables, so they stay right if a page or the practice's details change. Leave a pattern blank to keep the template's. <button type="button" class="button-link" id="smc-seo-examples">Fill in the examples</button></p>
+		<script>
+		document.getElementById( 'smc-seo-examples' ).addEventListener( 'click', function () {
+			document.querySelectorAll( '[id^="seo_"]' ).forEach( function ( el ) { if ( ! el.value && el.placeholder ) { el.value = el.placeholder; } } );
+		} );
+		</script>
+		<table class="form-table" role="presentation">
+			<tr><th><label for="seo_home_title">Homepage title</label></th><td><?php $f( 'home_title', 'Dentist in {city_state} {sep} {practice}' ); ?></td></tr>
+			<tr><th><label for="seo_home_desc">Homepage description</label></th><td><?php $f( 'home_desc', '{practice} offers family, cosmetic and emergency dentistry in {city}, {state}. Call {phone} to book.' ); ?></td></tr>
+			<tr><th><label for="seo_service_title">Service page title</label></th><td><?php $f( 'service_title', '{service} in {city}, {state} {sep} {practice}' ); ?></td></tr>
+			<tr><th><label for="seo_service_desc">Service page description</label></th><td><?php $f( 'service_desc', 'Looking for {service} in {city}, {state}? {practice} can help. Call {phone} to schedule a visit.' ); ?></td></tr>
+			<tr><th><label for="seo_page_title">Other pages title</label></th><td><?php $f( 'page_title', '{page} {sep} {practice} in {city}, {state}' ); ?><p class="description">Set as Yoast's default for pages. Pages' own titles are cleared so it applies (undone with the build).</p></td></tr>
+			<tr><th><label for="seo_page_desc">Other pages description</label></th><td><?php $f( 'page_desc', '' ); ?></td></tr>
+		</table>
+		<?php
+	}
+
 	private static function styles() {
 		?>
 		<style>
 			.smc-build .card { max-width: 1000px; }
 			.smc-build .smc-build-preview table, .smc-build .smc-build-preview details { margin: 10px 0; }
+			.smc-build .smc-services { background: #fff; border: 1px solid #dcdcde; padding: 10px 14px; max-width: 1000px; max-height: 420px; overflow: auto; }
+			.smc-build .smc-services label { display: block; padding: 3px 0; }
+			.smc-build .smc-services label.is-draft { opacity: .6; }
 			.smc-build .smc-build-load { margin: 12px 0 4px; padding: 12px 14px; background: #fff; border: 1px solid #dcdcde; max-width: 1000px; }
 		</style>
 		<?php
