@@ -255,14 +255,14 @@ class SMC_Location_Scanner {
 
 		foreach ( $this->phones as $re => $loc ) {
 			if ( preg_match( $re, $s, $m, PREG_OFFSET_CAPTURE ) ) {
-				$this->add( $findings, 'Phone', $this->snip( $s, $m[0][1], strlen( $m[0][0] ) ), $widget, $loc );
+				$this->add( $findings, 'Phone', $this->snip( $s, $m[0][1], strlen( $m[0][0] ) ), $widget, $loc, $m[0][0] );
 				break;
 			}
 		}
 		foreach ( $this->needles as list( $kind, $text, $loc ) ) {
 			$pos = stripos( $s, $text );
 			if ( false !== $pos ) {
-				$this->add( $findings, $kind, $this->snip( $s, $pos, strlen( $text ) ), $widget, $loc );
+				$this->add( $findings, $kind, $this->snip( $s, $pos, strlen( $text ) ), $widget, $loc, $text );
 			}
 		}
 
@@ -309,14 +309,14 @@ class SMC_Location_Scanner {
 			// Not a neighboring town with the same name in it ("West Springfield, MA").
 			$re = '/(?<![\w-])(?<!west )(?<!east )(?<!north )(?<!south )(?<!new )' . preg_quote( $parts[0], '/' ) . ',\s*(?:' . implode( '|', $state ) . ')(?![\w-])(\s*\d{5})?/i';
 			if ( preg_match( $re, $plain, $m, PREG_OFFSET_CAPTURE ) ) {
-				$this->add( $findings, ! empty( $m[1][0] ) ? 'Address' : 'City and state', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget, $loc );
+				$this->add( $findings, ! empty( $m[1][0] ) ? 'Address' : 'City and state', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget, $loc, empty( $m[1][0] ) ? $cs : '' );
 			}
 		}
 
 		// The site or organization name typed in (not in a URL or email, e.g. brightsmiledental.com).
 		foreach ( $this->site_names as $n ) {
 			if ( preg_match( '/(?<![\w@.\/-])' . preg_quote( $n, '/' ) . '(?![\w.@-]*\.(?:com|net|org))(?!\w)/i', $plain, $m, PREG_OFFSET_CAPTURE ) ) {
-				$this->add( $findings, 'Site name', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget );
+				$this->add( $findings, 'Site name', $this->snip( $plain, $m[0][1], strlen( $m[0][0] ) ), $widget, '', $n );
 				break;
 			}
 		}
@@ -329,13 +329,13 @@ class SMC_Location_Scanner {
 
 		// A copyright line with a typed year goes stale every January.
 		if ( preg_match( '/(?:©|&copy;|\(c\)|copyright)\s*(?:[^<\d]{0,20})?(19|20)\d{2}\b/i', $s, $m, PREG_OFFSET_CAPTURE ) ) {
-			$this->add( $findings, 'Year', $this->snip( $s, $m[0][1], strlen( $m[0][0] ) ), $widget );
+			$this->add( $findings, 'Year', $this->snip( $s, $m[0][1], strlen( $m[0][0] ) ), $widget, '', 'year' );
 		}
 
 		$social = '#https?://(?:www\.|m\.)?(?:facebook\.com|fb\.com|instagram\.com|tiktok\.com|youtube\.com/(?:@|c/|channel/|user/)|g\.page|business\.google\.com|google\.com/maps/place|maps\.app\.goo\.gl|search\.google\.com/local)[^\s"\'<>]*#i';
 		if ( preg_match_all( $social, $s, $all, PREG_OFFSET_CAPTURE ) ) {
 			foreach ( $all[0] as $hit ) {
-				$this->add( $findings, 'Social link', $hit[0], $widget );
+				$this->add( $findings, 'Social link', $hit[0], $widget, '', $hit[0] );
 			}
 		}
 	}
@@ -372,15 +372,20 @@ class SMC_Location_Scanner {
 				}
 			}
 			if ( $hit ) {
-				$this->add( $findings, 'Yoast SEO', "$label has the $hit[0] typed in: " . ( mb_strlen( $v ) > 90 ? mb_substr( $v, 0, 87 ) . '...' : $v ), 'yoast', $hit[1] );
+				$this->add( $findings, 'Yoast SEO', "$label has the $hit[0] typed in: " . ( mb_strlen( $v ) > 90 ? mb_substr( $v, 0, 87 ) . '...' : $v ), 'yoast', $hit[1], 'yoast' );
 			}
 		}
 	}
 
-	private function add( array &$findings, $kind, $snippet, $widget, $loc = '' ) {
+	private function add( array &$findings, $kind, $snippet, $widget, $loc = '', $value = '' ) {
 		$key = $kind . '|' . $snippet;
 		if ( isset( $findings[ $key ] ) ) {
 			$findings[ $key ]['count']++;
+			// Fixable if any of its places can be fixed here (e.g. one isn't in an HTML widget).
+			if ( ! $findings[ $key ]['auto'] && class_exists( 'SMC_Location_Fixer' ) && SMC_Location_Fixer::can_fix( $kind, $widget, $value ) ) {
+				$findings[ $key ]['auto']  = true;
+				$findings[ $key ]['value'] = (string) $value;
+			}
 			return;
 		}
 		$findings[ $key ] = [
@@ -390,6 +395,8 @@ class SMC_Location_Scanner {
 			'location' => $loc,
 			'fix'      => self::FIXES[ $kind ] ?? '',
 			'count'    => 1,
+			'value'    => (string) $value,
+			'auto'     => class_exists( 'SMC_Location_Fixer' ) && SMC_Location_Fixer::can_fix( $kind, $widget, $value ),
 		];
 	}
 

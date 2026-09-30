@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SMC Locations
  * Description: SMC multi-location tools. Adds hours, social links and a Google Map to each location, with [location_hours], [location_social] and [location_map] shortcodes. Manage locations from the Locations menu in wp-admin, or add them with "wp smc location".
- * Version:     1.29.0
+ * Version:     1.30.0-beta.1
  * Author:      SMC National
  * Requires PHP: 7.4
  * Update URI:  https://github.com/smcnational/smc-location-generator
@@ -47,6 +47,7 @@ if ( is_admin() ) {
 	new SMC_Location_Manager();
 	new SMC_Location_Admin();
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
+	require_once __DIR__ . '/includes/class-smc-location-fixer.php';
 	require_once __DIR__ . '/includes/class-smc-location-scan-page.php';
 	new SMC_Location_Scan_Page();
 	require_once __DIR__ . '/includes/class-smc-location-reviews-import.php';
@@ -61,6 +62,7 @@ if ( is_admin() ) {
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
+	require_once __DIR__ . '/includes/class-smc-location-fixer.php';
 	require_once __DIR__ . '/includes/class-smc-location-command.php';
 	WP_CLI::add_command( 'smc location', 'SMC_Location_Command' );
 }

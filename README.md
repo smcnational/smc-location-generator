@@ -392,6 +392,15 @@ Settings controlled by an Elementor dynamic tag are skipped, and so is anything 
 
 From WP-CLI: `wp smc location scan`, with `--templates-only`, `--pages-only`, or `--format=csv > typed-in.csv` for a spreadsheet.
 
+**Applying fixes without Elementor:** results that can be fixed automatically have an **Apply** button, and **Apply all** at the top fixes every one of them at once. That covers phone numbers, emails, booking links, social links, city and state, the site name, copyright years and Yoast fields. Where the text is decides how:
+- Text Editor and Shortcode widgets (and pages without Elementor): the shortcode goes into the text, e.g. `Call [location field="phone_label"]`, and `tel:`/`mailto:` links inside it become `[location field="phone_link"]`/`[location field="email_link"]`.
+- Links (buttons, icons, social icons, icon lists): the link gets Elementor's Shortcode dynamic tag with the right field.
+- Other text (headings, button text, icon list items...): the setting gets the Shortcode dynamic tag holding the text with the shortcode in it, so the rest of the wording stays. The typed text stays underneath as a fallback.
+- A value that belongs to a different location than the page gets `location="slug"`. Templates don't, so they follow the page they're shown on.
+- HTML widgets don't run shortcodes, and addresses, hours, maps, forms, team, reviews, logos and holidays need a person, so those say **In Elementor**.
+
+Every item Scan changes is backed up first. **Undo all fixes** puts them all back; **Keep them** drops the backups. After fixing, the scan runs again, so what's listed is what's left.
+
 ## Add a location (wp-admin)
 
 Go to **Locations > Add Location**. Only administrators can see the Locations menu.
