@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: SMC Locations
- * Description: SMC multi-location tools. Adds hours, social links and a Google Map to each location, with [location_hours], [location_social] and [location_map] shortcodes. Manage locations from the Locations menu in wp-admin, or add them with "wp smc location".
- * Version:     1.28.0
+ * Description: SMC location tools: Site Setup for single-location builds, plus multi-location tools. Adds hours, social links and a Google Map to each location, with [location_hours], [location_social] and [location_map] shortcodes. Manage locations from the Locations menu in wp-admin, or add them with "wp smc location".
+ * Version:     1.29.0-beta.1
  * Author:      SMC National
  * Requires PHP: 7.4
  * Update URI:  https://github.com/smcnational/smc-location-generator
@@ -28,6 +28,7 @@ require_once __DIR__ . '/includes/class-smc-location-schema.php';
 require_once __DIR__ . '/includes/class-smc-location-holidays.php';
 require_once __DIR__ . '/includes/class-smc-location-updater.php';
 require_once __DIR__ . '/includes/class-smc-location-transfer.php';
+require_once __DIR__ . '/includes/class-smc-site-setup.php';
 
 SMC_Location_Core::init();
 SMC_Location_Fields::init();
@@ -44,6 +45,8 @@ SMC_Location_Updater::init();
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/class-smc-location-admin.php';
 	new SMC_Location_Manager();
+	require_once __DIR__ . '/includes/class-smc-site-setup-page.php';
+	new SMC_Site_Setup_Page();
 	new SMC_Location_Admin();
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
 	require_once __DIR__ . '/includes/class-smc-location-scan-page.php';
@@ -60,4 +63,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/includes/class-smc-location-scanner.php';
 	require_once __DIR__ . '/includes/class-smc-location-command.php';
 	WP_CLI::add_command( 'smc location', 'SMC_Location_Command' );
+	require_once __DIR__ . '/includes/class-smc-site-command.php';
+	WP_CLI::add_command( 'smc site', 'SMC_Site_Command' );
 }

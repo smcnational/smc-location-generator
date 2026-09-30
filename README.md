@@ -1,6 +1,6 @@
 # SMC Locations
 
-Adds a new location to an SMC multi-location site by cloning an existing location. It copies:
+Sets up single-location client sites from a starter template (see Site Setup below), and adds a new location to an SMC multi-location site by cloning an existing location. It copies:
 
 - **Pages:** the location's page tree, minus landing pages and nearby-city pages.
 - **Location terms:** the `location_category` term with all its fields, and the location's `page_type` term.
@@ -10,6 +10,41 @@ Adds a new location to an SMC multi-location site by cloning an existing locatio
 The city name, phone, and address are swapped everywhere. Every run is logged, so it can be undone.
 
 Requires Elementor Pro and the SMC `[location]` system (the `location_category` taxonomy with ACF fields). Everything lives under the **Locations** menu in the wp-admin sidebar. Adding locations also works with `wp smc location` in WP-CLI; both do the same thing, and each can undo the other's clones.
+
+## Site Setup (single-location builds)
+
+**Locations > Site Setup** turns a starter template into a single-location client site in place. Nothing is cloned; pages stay at the root (`/services/`).
+
+1. **Intake:** fill in the form, or load an intake file (**Download a blank intake file** gives one with this starter's values and service pages already listed):
+   - **Practice:** site title, practice name (Yoast's organization name, used by `[brand_name]` and the schema) and tagline.
+   - **Location:** city and state, street, zip, phone, email, booking button, embedded form, Google Map, hours and social links. Blank fields keep the starter's value (shown in grey).
+   - **Doctors:** one per line, `Dr. Jane Lee | DDS | General Dentist`. They're added under **Locations > Team** for the location; add photos and bios there.
+   - **Services:** untick services the practice doesn't offer. They're set to draft, along with the pages under them, and taken out of menus. Buttons or links to them are listed so you can remove them.
+   - **Starter values:** what the starter uses now, read from its location, or from the content when the starter has details typed in (the phone number typed most often). Correct any that are wrong.
+   - **Extra replacements:** anything else typed in, `old => new`, e.g. a placeholder doctor. **Never change** protects strings like a street that shares the starter's city name.
+   - **Options:** rename page URLs that contain the starter's city (`/dentist-springfield/` to `/dentist-shelbyville/`, links included), and tie every page to the location so `[location]` shortcodes, schema and Yoast variables work everywhere.
+2. **Preview** shows every replacement, location field, site setting, page, template and menu item that will change. Nothing changes yet.
+3. **Apply.** The starter's city, phone (every format, including `tel:` links), street, city/state/zip, email, booking link and name are swapped in pages, posts, Theme Builder templates, popups, menus and Yoast fields. Media paths are never changed. The starter's name in the copy becomes the practice name.
+
+Starter pages whose URL changes don't get 301 redirects, since they were never live.
+
+**Build checklist** (top of the screen): setup status, starter values still in the content, the location's details, pages without a location, typed-in details (from **Scan**), logo, favicon, brand, doctors, reviews, Yoast, search visibility, and manual items (forms tested, desktop and mobile review, analytics, legal pages, domain). Red blocks launch, amber is worth a look.
+
+**Run it again** to fix things: it keeps the first backup. **Undo setup** puts the site back to the starter exactly (content, URLs, menus, location, site title; removes the doctors it added). **Finalize** keeps the setup and deletes the backups.
+
+Sites with more than one location use **Add Location** and each location's launch checklist instead.
+
+From WP-CLI:
+
+```bash
+wp smc site init                          # writes site-setup.json with the starter's values
+nano site-setup.json                      # fill it in; services.remove takes paths from _services_available
+wp smc site setup site-setup.json --dry-run
+wp smc site setup site-setup.json         # shows the plan, then asks
+wp smc site checklist
+wp smc site undo
+wp smc site finalize
+```
 
 ## Hours, social links and map
 
