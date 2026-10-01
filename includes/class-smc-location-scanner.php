@@ -182,6 +182,8 @@ class SMC_Location_Scanner {
 			'status'      => $post->post_status,
 			'location'    => $this->location_label( $post, $is_tpl ),
 			'edit'        => admin_url( 'post.php?post=' . $post->ID . '&action=elementor' ),
+			// The page itself (a preview for drafts and templates).
+			'view'        => 'publish' === $post->post_status && ! $is_tpl ? get_permalink( $post ) : get_preview_post_link( $post ),
 			'findings'    => $findings,
 		];
 	}

@@ -185,7 +185,7 @@ class SMC_Location_Scan_Page {
 			?>
 			<div class="smc-result">
 				<div class="smc-result-head">
-					<strong><a href="<?php echo esc_url( $r['edit'] ); ?>" target="_blank"><?php echo esc_html( $r['title'] ?: '(no title)' ); ?></a></strong>
+					<strong><a href="<?php echo esc_url( $r['view'] ?: $r['edit'] ); ?>" target="_blank"><?php echo esc_html( $r['title'] ?: '(no title)' ); ?></a></strong>
 					<span><?php echo esc_html( $r['type'] ); ?><?php echo 'publish' !== $r['status'] ? esc_html( " ({$r['status']})" ) : ''; ?></span>
 					<span>Shows on: <?php echo esc_html( $r['location'] ); ?></span>
 					<a href="<?php echo esc_url( $r['edit'] ); ?>" target="_blank">Edit with Elementor</a>
