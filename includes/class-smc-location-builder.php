@@ -98,6 +98,10 @@ class SMC_Location_Builder {
 		$posts = $this->posts();
 		$log   = [ 'time' => time(), 'user' => get_current_user_id(), 'practice' => $this->to['practice'], 'city' => $this->to['city'], 'posts' => [], 'terms' => [], 'options' => [], 'created' => [] ];
 
+		if ( ! $this->dry && class_exists( 'SMC_Location_Audit' ) && ! SMC_Location_Audit::baseline() ) {
+			// Remember the template as it was, so the launch audit can find what's left of it.
+			SMC_Location_Audit::save_baseline();
+		}
 		if ( ! $this->dry ) {
 			// Moving a page's URL during a build isn't a move visitors need redirecting from.
 			remove_action( 'post_updated', [ 'SMC_Location_Redirects', 'path_changed' ], 10 );

@@ -38,6 +38,16 @@ class SMC_Location_Scan_Page {
 			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			$notice = $this->apply( $do, $tpl, $pgs );
 		}
+		$aud = $ran ? ! empty( $_POST['audit'] ) : true; // phpcs:ignore WordPress.Security.NonceVerification
+		$ado = sanitize_key( $_POST['smc_audit_do'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $ado ) {
+			check_admin_referer( 'smc_loc_audit' );
+			$ran    = true;
+			$tpl    = ! empty( $_POST['templates'] );
+			$pgs    = ! empty( $_POST['pages'] );
+			$aud    = ! empty( $_POST['audit'] );
+			$notice = $this->audit_action( $ado );
+		}
 		$changed = SMC_Location_Fixer::changed();
 		?>
 		<div class="wrap smc-scan">
@@ -56,10 +66,13 @@ class SMC_Location_Scan_Page {
 				</p></div>
 			<?php endif; ?>
 
+			<?php $this->render_baseline( $tpl, $pgs, $aud ); ?>
+
 			<form method="post">
 				<?php wp_nonce_field( 'smc_loc_scan' ); ?>
 				<input type="hidden" name="smc_scan" value="1">
 				<p>
+					<label><input type="checkbox" name="audit" value="1" <?php checked( $aud ); ?>> <strong>Launch audit:</strong> template leftovers and launch blockers (search engines, logo, forms, tracking, SEO...)</label><br>
 					<label><input type="checkbox" name="templates" value="1" <?php checked( $tpl ); ?>> Theme Builder templates (headers, footers, sections)</label><br>
 					<label><input type="checkbox" name="pages" value="1" <?php checked( $pgs ); ?>> Pages</label>
 				</p>
@@ -71,7 +84,13 @@ class SMC_Location_Scan_Page {
 					@set_time_limit( 300 );
 				}
 				wp_raise_memory_limit( 'admin' );
-				$this->render_results( SMC_Location_Scanner::run( [ 'templates' => $tpl, 'pages' => $pgs ] ), $tpl, $pgs );
+				if ( $aud ) {
+					$this->render_audit( SMC_Location_Audit::run(), $tpl, $pgs );
+				}
+				if ( $tpl || $pgs ) {
+					echo '<h2 class="smc-section">Typed-in details</h2>';
+					$this->render_results( SMC_Location_Scanner::run( [ 'templates' => $tpl, 'pages' => $pgs ] ), $tpl, $pgs );
+				}
 			}
 			?>
 		</div>
@@ -84,6 +103,16 @@ class SMC_Location_Scan_Page {
 			.smc-scan .smc-fix code { white-space: normal; }
 			.smc-scan .smc-counts span { display: inline-block; margin-right: 14px; }
 			.smc-scan .smc-fix-form { display: inline-block; margin: 0 6px 0 0; }
+			.smc-scan .smc-baseline { background: #fff; border: 1px solid #dcdcde; padding: 2px 14px 10px; max-width: 1172px; margin: 12px 0; }
+			.smc-scan .smc-section { margin-top: 28px; padding-top: 12px; border-top: 1px solid #dcdcde; max-width: 1200px; }
+			.smc-scan .smc-audit { max-width: 1200px; margin-bottom: 16px; }
+			.smc-scan .smc-audit td { vertical-align: top; }
+			.smc-scan .smc-where { margin: 6px 0 0 16px; list-style: disc; }
+			.smc-scan .smc-where li { margin: 0; }
+			.smc-scan .smc-sev { display: inline-block; margin-right: 10px; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+			.smc-scan .smc-sev-blocker { background: #fcf0f1; color: #b32d2e; }
+			.smc-scan .smc-sev-should { background: #fcf9e8; color: #8a6d00; }
+			.smc-scan .smc-sev-optional { background: #f0f6fc; color: #2271b1; }
 			.smc-scan .smc-apply-all { background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 4px 14px 14px; max-width: 1172px; margin: 12px 0 20px; }
 		</style>
 		<?php
@@ -96,6 +125,7 @@ class SMC_Location_Scan_Page {
 		echo '<input type="hidden" name="smc_fix_do" value="' . esc_attr( $do ) . '">';
 		echo $tpl ? '<input type="hidden" name="templates" value="1">' : '';
 		echo $pgs ? '<input type="hidden" name="pages" value="1">' : '';
+		echo ! isset( $_POST['audit'] ) && isset( $_POST['smc_scan'] ) ? '' : '<input type="hidden" name="audit" value="1">'; // phpcs:ignore WordPress.Security.NonceVerification
 		foreach ( $fields as $k => $v ) {
 			echo '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( (string) $v ) . '">';
 		}
@@ -138,6 +168,123 @@ class SMC_Location_Scan_Page {
 		return $places
 			? sprintf( 'Fixed %d place(s) in %d item(s). The list below is the fresh scan: what\'s left needs doing by hand.', $places, count( $items ) )
 			: 'Nothing was changed. It may already be fixed, or it sits somewhere that has to be fixed in Elementor.';
+	}
+
+	/* ========== Launch audit ========== */
+
+	private function audit_button( $do, $label, array $fields, $class = 'button-link', $confirm = '' ) {
+		echo '<form method="post" class="smc-fix-form"' . ( $confirm ? ' onsubmit="return confirm(' . esc_attr( wp_json_encode( $confirm ) ) . ')"' : '' ) . '>';
+		wp_nonce_field( 'smc_loc_audit' );
+		echo '<input type="hidden" name="smc_audit_do" value="' . esc_attr( $do ) . '"><input type="hidden" name="templates" value="1"><input type="hidden" name="pages" value="1"><input type="hidden" name="audit" value="1">';
+		foreach ( $fields as $k => $v ) {
+			echo '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( (string) $v ) . '">';
+		}
+		echo '<button type="submit" class="' . esc_attr( $class ) . '">' . esc_html( $label ) . '</button></form>';
+	}
+
+	private function audit_action( $do ) {
+		switch ( $do ) {
+			case 'baseline':
+				$extra = array_values( array_filter( array_map( 'trim', preg_split( '/\r?\n/', sanitize_textarea_field( wp_unslash( $_POST['extra'] ?? '' ) ) ) ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+				$b     = SMC_Location_Audit::save_baseline( $extra );
+				return sprintf( 'Template baseline saved: %s, %d photo(s), %d form(s). Sites cloned from this one will flag anything of it they still have.', esc_html( $b['practice'] ), count( $b['media'] ), count( $b['forms'] ) );
+			case 'extra':
+				$b = SMC_Location_Audit::baseline();
+				if ( $b ) {
+					$b['extra'] = array_values( array_filter( array_map( 'trim', preg_split( '/\r?\n/', sanitize_textarea_field( wp_unslash( $_POST['extra'] ?? '' ) ) ) ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+					update_option( SMC_Location_Audit::BASELINE, $b, false );
+				}
+				return 'Template text to look for saved.';
+			case 'ignore':
+				SMC_Location_Audit::ignore( sanitize_text_field( wp_unslash( $_POST['key'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+				return 'Ignored. It won\'t be listed again (Show ignored at the bottom of the audit brings it back).';
+			case 'unignore':
+				SMC_Location_Audit::unignore_all();
+				return 'Ignored findings are listed again.';
+			case 'keep':
+				$id = (int) ( $_POST['item'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+				if ( $id && 'attachment' === get_post_type( $id ) ) {
+					update_post_meta( $id, SMC_Location_Audit::KEEP, 1 );
+				}
+				return 'Marked as a generic image every client can keep. Set it on the template too, so new clones skip it.';
+		}
+		return '';
+	}
+
+	private function render_baseline( $tpl, $pgs, $aud ) {
+		$b = SMC_Location_Audit::baseline();
+		echo '<div class="smc-baseline">';
+		if ( ! $b ) {
+			echo '<p><strong>No template baseline yet.</strong> On the <em>template</em> site, save one: it records the template\'s demo details, logo, favicon, colors, forms and photos. Every site cloned from the template carries it, so the launch audit can find what\'s left of the template. (New Build saves one automatically when there isn\'t one.)</p>';
+			$this->audit_button( 'baseline', 'Save this site as the template baseline', [], 'button', 'Save this site as the template baseline? Do this on the template, not a client\'s site.' );
+		} else {
+			$is = SMC_Location_Audit::is_template( $b );
+			printf(
+				'<p><strong>Template baseline:</strong> %s (%s, %s), %d photo(s), %d form(s), saved %s. %s</p>',
+				esc_html( $b['practice'] ),
+				esc_html( $b['city'] ),
+				esc_html( $b['phone'] ),
+				count( (array) $b['media'] ),
+				count( (array) $b['forms'] ),
+				esc_html( wp_date( get_option( 'date_format' ), (int) $b['saved'] ) ),
+				$is ? '<em>This is the template, so leftover checks are skipped here; they run on its clones.</em>' : 'Leftover checks compare this site with it.'
+			);
+			echo '<details><summary>Other template text to look for</summary><form method="post">';
+			wp_nonce_field( 'smc_loc_audit' );
+			echo '<input type="hidden" name="smc_audit_do" value="extra"><input type="hidden" name="templates" value="1"><input type="hidden" name="pages" value="1"><input type="hidden" name="audit" value="1">';
+			echo '<p><textarea name="extra" rows="4" class="large-text" placeholder="Downtown Springfield&#10;Springfield Elementary">' . esc_textarea( implode( "\n", (array) $b['extra'] ) ) . '</textarea></p><p class="description">One per line: anything else from the template that shouldn\'t be left on a client\'s site (a neighborhood, a demo testimonial\'s name...). The demo practice name, city, phone, address, email, domain and doctors are looked for already.</p>';
+			submit_button( 'Save', 'secondary', 'submit', false );
+			echo '</form>';
+			if ( $is ) {
+				echo '<p>';
+				$this->audit_button( 'baseline', 'Update the baseline from this site', [], 'button', 'Replace the baseline with this site\'s current details, branding, forms and photos?' );
+				echo '</p>';
+			}
+			echo '</details>';
+		}
+		echo '</div>';
+	}
+
+	private function render_audit( array $a, $tpl, $pgs ) {
+		$labels = [ 'blocker' => 'Launch blockers', 'should' => 'Should fix', 'optional' => 'Optional' ];
+		echo '<h2 class="smc-section">Launch audit</h2><p class="smc-audit-sum">';
+		foreach ( $labels as $sev => $l ) {
+			printf( '<span class="smc-sev smc-sev-%s">%s: %d</span>', esc_attr( $sev ), esc_html( $l ), count( $a[ $sev ] ) );
+		}
+		echo '</p>';
+		if ( ! $a['blocker'] ) {
+			echo '<div class="notice notice-success inline"><p><strong>No launch blockers.</strong> ' . ( $a['should'] ? 'Work through Should fix before launch if you can.' : '' ) . '</p></div>';
+		}
+		foreach ( $labels as $sev => $l ) {
+			if ( ! $a[ $sev ] ) {
+				continue;
+			}
+			echo '<h3>' . esc_html( $l ) . '</h3><table class="widefat striped smc-audit"><thead><tr><th style="width:180px">Check</th><th>Found</th><th style="width:28%">How to fix</th><th style="width:110px"></th></tr></thead><tbody>';
+			foreach ( $a[ $sev ] as $f ) {
+				echo '<tr><td class="smc-kind">' . esc_html( $f['check'] ) . '</td><td>' . esc_html( $f['detail'] );
+				if ( $f['where'] ) {
+					echo '<ul class="smc-where">';
+					foreach ( $f['where'] as [ $title, $url ] ) {
+						echo '<li><a href="' . esc_url( $url ) . '" target="_blank">' . esc_html( $title ) . '</a></li>';
+					}
+					echo $f['more'] ? '<li class="description">and ' . (int) $f['more'] . ' more</li>' : '';
+					echo '</ul>';
+				}
+				echo '</td><td>' . esc_html( $f['fix'] ) . ( $f['link'] ? ' <a href="' . esc_url( $f['link'] ) . '" target="_blank">Open</a>' : '' ) . '</td><td>';
+				if ( 'Template photo' === $f['check'] && $f['item'] ) {
+					$this->audit_button( 'keep', 'Keep for clients', [ 'item' => $f['item'] ] );
+					echo '<br>';
+				}
+				$this->audit_button( 'ignore', 'Ignore', [ 'key' => $f['key'], 'label' => $f['check'] . ': ' . $f['detail'] ] );
+				echo '</td></tr>';
+			}
+			echo '</tbody></table>';
+		}
+		if ( $a['ignored'] ) {
+			echo '<p class="description">' . (int) $a['ignored'] . ' ignored finding(s) not shown. ';
+			$this->audit_button( 'unignore', 'Show ignored', [] );
+			echo '</p>';
+		}
 	}
 
 	private function render_results( $results, $tpl = true, $pgs = true ) {

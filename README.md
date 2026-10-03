@@ -368,6 +368,22 @@ The page stops 120px above the profile so a sticky header doesn't cover it; chan
 
 Everything follows the page's location, so the Meet the Doctors and Meet the Team pages work for every location, including new clones. New locations start with no team; people are never copied from another location. Someone who works at two offices is added once, with both locations ticked. Deleting a location trashes the people who work only there. The team (with photos) is included in **Export / Import**, and **Scan** flags headings and profile boxes that still have a saved team member's name typed in.
 
+## Launch audit
+
+**Locations > Scan** also runs a **launch audit**: is this site ready to go live for its client? Findings are sorted into **Launch blockers**, **Should fix** and **Optional**, each with where it is (links straight to the page, template, menu or image) and how to fix it. **Ignore** hides a finding that's intended; **Show ignored** brings them back.
+
+**Template leftovers** (on sites cloned from a template):
+- The template's demo practice name, city, street, phone (any format), email, domain and doctors, anywhere: pages, templates, menus, Yoast fields and image alt text. Add other template text to look for (a neighborhood, a demo testimonial's name) under **Other template text to look for**.
+- Placeholder text: lorem ipsum, "Dr. Name", "Practice Name", "Your City", `XXX-XXX-XXXX`, `123-456-7890`, `[Insert ...]`, TBD/TODO, `info@example.com`, fictional 555-01xx numbers, "coming soon".
+- Links and images pointing at the template's domain or another `smcnational.com` staging site (a blocker), and links using this site's own full staging address (optional; they need changing at the domain switch).
+- The template's photos still on pages. **Keep for clients** marks a generic image (an icon, a pattern) so it isn't flagged again; it's also a checkbox on each image in the Media Library. Set it on the template so every clone skips those images.
+- The template's logo, mobile logo, favicon and global colors, and its JotForms (in the locations' form fields or on pages).
+- WordPress's Sample Page, Hello world! post and "Just another WordPress site" tagline.
+
+**Launch checks:** "Discourage search engines" on (fine on staging, a blocker at launch), pages set to noindex in Yoast (a blocker for the homepage), no Google Tag Manager / Analytics / CallRail code found, no privacy policy or still WordPress's starter text, no accessibility page, pages without a meta description and no default, duplicate SEO titles, pages with no H1 or more than one, images on pages without alt text or over 500 KB.
+
+**The template baseline** makes the leftover checks possible. On the **template** site, click **Save this site as the template baseline** on the Scan screen: it records the demo details, logo, mobile logo, favicon, colors, JotForms and every photo. It's saved with the site, so every clone carries it. On the template itself leftover checks are skipped. New Build saves a baseline automatically if the site doesn't have one.
+
 ## Scan for typed-in details
 
 **Locations > Scan** finds location details that are typed into Elementor templates and pages instead of coming from the shortcodes:
