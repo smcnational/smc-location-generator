@@ -34,7 +34,7 @@ jobs:
       - name: Build the plugin zip
         run: |
           mkdir -p build/smc-location-generator
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude 'RELEASING.md' ./ build/smc-location-generator/
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'build' --exclude 'RELEASING.md' --exclude 'scripts' ./ build/smc-location-generator/
           cd build && zip -rq smc-location-generator.zip smc-location-generator
 
       - uses: softprops/action-gh-release@v2

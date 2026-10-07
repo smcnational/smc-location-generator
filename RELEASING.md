@@ -8,7 +8,17 @@
 
 Sites update themselves from this repository's GitHub releases. A GitHub Action builds the plugin zip and publishes the release whenever a version tag is pushed.
 
-## Normal release
+## Shipping with the script (usual way)
+
+Claude hands over `smc-location-generator-repo.zip`. Download it, then:
+
+```bash
+cd ~/Projects/smc-location-generator && scripts/ship.sh "What changed"
+```
+
+It mirrors the zip into the repo (deleted files included), stops if the version's tag already exists, if nothing changed or if PHP has a syntax error, shows the version and changed files, and asks. Then it commits, pushes, tags, pushes the tag, deletes the zip, and (with the GitHub CLI installed) waits for the release build. Answer anything but `y` and the repo is put back as it was.
+
+## Normal release (by hand)
 
 1. Change the `Version:` line at the top of `smc-location-generator.php`, e.g. `1.16.0`.
 2. Commit and push.

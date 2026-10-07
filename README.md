@@ -368,6 +368,10 @@ The page stops 120px above the profile so a sticky header doesn't cover it; chan
 
 Everything follows the page's location, so the Meet the Doctors and Meet the Team pages work for every location, including new clones. New locations start with no team; people are never copied from another location. Someone who works at two offices is added once, with both locations ticked. Deleting a location trashes the people who work only there. The team (with photos) is included in **Export / Import**, and **Scan** flags headings and profile boxes that still have a saved team member's name typed in.
 
+## Guide
+
+**Locations > Guide** explains the plugin inside wp-admin: which path to take (New Build, Add Location), launching, building a template, every shortcode and Loop query ID (click to copy), Yoast variables, team, reviews, holidays, brand, redirects and WP-CLI. It has a search box, and the Plugins screen links to it.
+
 ## Launch audit
 
 **Locations > Scan** also runs a **launch audit**: is this site ready to go live for its client? Findings are sorted into **Launch blockers**, **Should fix** and **Optional**, each with where it is (links straight to the page, template, menu or image) and how to fix it. **Ignore** hides a finding that's intended; **Show ignored** brings them back.
