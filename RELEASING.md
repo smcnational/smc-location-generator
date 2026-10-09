@@ -8,15 +8,17 @@
 
 Sites update themselves from this repository's GitHub releases. A GitHub Action builds the plugin zip and publishes the release whenever a version tag is pushed.
 
-## Shipping with the script (usual way)
+## Shipping (usual way)
 
-Claude hands over `smc-location-generator-repo.zip`. Download it, then:
+Releases use the shared `ship` command (the same one for every SMC plugin repo). Claude hands over `smc-location-generator-v<version>.zip`, with the repo inside a `smc-location-generator/` folder. Download it, then:
 
 ```bash
-cd ~/Projects/smc-location-generator && scripts/ship.sh "What changed"
+cd ~/Projects/smc-location-generator && ship
 ```
 
-It mirrors the zip into the repo (deleted files included), stops if the version's tag already exists, if nothing changed or if PHP has a syntax error, shows the version and changed files, and asks. Then it commits, pushes, tags, pushes the tag, deletes the zip, and (with the GitHub CLI installed) waits for the release build. Answer anything but `y` and the repo is put back as it was.
+It pulls the latest from GitHub, applies the newest `smc-location-generator-v*.zip` in Downloads (files the zip no longer has are deleted from the repo too), stops if the version is already tagged, shows the changes and asks. Then it commits, pushes, tags, pushes the tag and deletes the zip. The GitHub Action builds the release.
+
+`ship --bump 1.31.0` (or `1.31.0-beta.1`) sets the version and ships local changes without a zip.
 
 ## Normal release (by hand)
 
